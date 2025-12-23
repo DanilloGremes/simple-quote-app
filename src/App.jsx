@@ -553,8 +553,3 @@ function App() {
 }
 
 export default App
-
-function App() {
-  console.log("O App tentou iniciar!"); // <--- Adicione isso
-  const [user, setUser] = useState(null)
-  // ... resto do código
