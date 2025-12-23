@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react'
 import { jsPDF } from "jspdf"
 import { auth, db, loginGoogle, logout } from './firebase'
 import { onAuthStateChanged } from 'firebase/auth'
-import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, orderBy } from 'firebase/firestore'
+import { doc, getDoc, setDoc, collection, addDoc, getDocs, deleteDoc, query, orderBy } from 'firebase/firestore'
 
 // --- DICIONÁRIO DE TRADUÇÕES ---
 const translations = {
   pt: {
-    appTitle: "Simple Quote",
+    appTitle: "SquarePro Quote", // Sugestão de nome mais amplo
     loginBtn: "Entrar com Google",
     loading: "Carregando...",
     welcome: "Olá",
@@ -16,7 +16,6 @@ const translations = {
     tabHistory: "HISTÓRICO",
     tabCompany: "EMPRESA",
     
-    // Empresa
     companyTitle: "Dados da Sua Empresa",
     logoLabel: "Logotipo (Imagem)",
     companyNamePH: "Nome da Empresa",
@@ -28,19 +27,19 @@ const translations = {
     saveBtn: "Salvar Configurações",
     alertSaved: "Dados salvos!",
 
-    // Histórico
     historyTitle: "Orçamentos Salvos",
     emptyHistory: "Nenhum orçamento salvo ainda.",
     openBtn: "Abrir",
+    confirmDelete: "Tem certeza que deseja apagar este orçamento?",
+    alertDeleted: "Orçamento apagado com sucesso!",
     
-    // Orçamento
     clientTitle: "Cliente",
     quoteNumberPH: "Orç. #",
     clientNamePH: "Nome Completo",
     clientAddressPH: "Endereço da Obra",
     serviceTitle: "Serviço / Materiais",
     materialLabel: "DESCRIÇÃO / MATERIAL",
-    materialPH: "Ex: Instalação de Piso Vinílico",
+    materialPH: "Ex: Instalação de Piso / Pintura / Drywall",
     sqftLabel: "ÁREA (SQFT)",
     priceLabel: "PREÇO ($)",
     notesPH: "Observações e detalhes...",
@@ -49,7 +48,6 @@ const translations = {
     btnPDF: "Baixar PDF",
     alertQuoteSaved: "Orçamento salvo!",
 
-    // PDF Texts
     pdfQuote: "ORÇAMENTO",
     pdfDate: "Data",
     pdfValid: "Validade: 30 dias",
@@ -60,7 +58,7 @@ const translations = {
     pdfFinalTotal: "TOTAL FINAL"
   },
   en: {
-    appTitle: "Simple Quote",
+    appTitle: "SquarePro Quote",
     loginBtn: "Sign in with Google",
     loading: "Loading...",
     welcome: "Hello",
@@ -83,6 +81,8 @@ const translations = {
     historyTitle: "Saved Quotes",
     emptyHistory: "No quotes found.",
     openBtn: "Open",
+    confirmDelete: "Are you sure you want to delete this quote?",
+    alertDeleted: "Quote deleted successfully!",
     
     clientTitle: "Client Info",
     quoteNumberPH: "Quote #",
@@ -90,7 +90,7 @@ const translations = {
     clientAddressPH: "Job Address",
     serviceTitle: "Service / Materials",
     materialLabel: "DESCRIPTION / MATERIAL",
-    materialPH: "Ex: LVP Floor Installation",
+    materialPH: "Ex: LVP Floor / Painting / Drywall",
     sqftLabel: "AREA (SQFT)",
     priceLabel: "PRICE ($)",
     notesPH: "Notes and details...",
@@ -109,7 +109,7 @@ const translations = {
     pdfFinalTotal: "GRAND TOTAL"
   },
   es: {
-    appTitle: "Simple Quote",
+    appTitle: "SquarePro Quote",
     loginBtn: "Entrar con Google",
     loading: "Cargando...",
     welcome: "Hola",
@@ -132,6 +132,8 @@ const translations = {
     historyTitle: "Presupuestos Guardados",
     emptyHistory: "No hay presupuestos aún.",
     openBtn: "Abrir",
+    confirmDelete: "¿Estás seguro de que quieres borrar este presupuesto?",
+    alertDeleted: "¡Presupuesto borrado!",
     
     clientTitle: "Cliente",
     quoteNumberPH: "Presup. #",
@@ -139,7 +141,7 @@ const translations = {
     clientAddressPH: "Dirección de Obra",
     serviceTitle: "Servicio / Materiales",
     materialLabel: "DESCRIPCIÓN / MATERIAL",
-    materialPH: "Ej: Instalación de Piso",
+    materialPH: "Ej: Instalación de Piso / Pintura",
     sqftLabel: "ÁREA (SQFT)",
     priceLabel: "PRECIO ($)",
     notesPH: "Notas y detalles...",
@@ -165,15 +167,13 @@ function App() {
   const [activeTab, setActiveTab] = useState('quote') 
   const [savedQuotes, setSavedQuotes] = useState([])
   
-  // DETECÇÃO AUTOMÁTICA DE IDIOMA
   const [lang, setLang] = useState(() => {
-    const browserLang = navigator.language || navigator.userLanguage; // ex: 'pt-BR' ou 'en-US'
+    const browserLang = navigator.language || navigator.userLanguage; 
     if (browserLang.startsWith('pt')) return 'pt';
     if (browserLang.startsWith('es')) return 'es';
-    return 'en'; // Padrão Inglês
+    return 'en'; 
   })
 
-  // Função auxiliar para pegar texto
   const t = (key) => translations[lang][key] || key
 
   const [formData, setFormData] = useState({
@@ -190,12 +190,20 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser)
       if (currentUser) {
-        const docRef = doc(db, "users", currentUser.uid)
-        const docSnap = await getDoc(docRef)
-        if (docSnap.exists()) {
-          setCompanyData(prev => ({ ...prev, ...docSnap.data().company }))
+        try {
+            const docRef = doc(db, "users", currentUser.uid)
+            const docSnap = await getDoc(docRef)
+            
+            if (docSnap.exists()) {
+              const data = docSnap.data();
+              if (data && data.company) {
+                setCompanyData(prev => ({ ...prev, ...data.company }))
+              }
+            }
+            fetchQuotes(currentUser.uid)
+        } catch (error) {
+            console.error("Erro ao carregar dados:", error)
         }
-        fetchQuotes(currentUser.uid)
       }
       setLoading(false)
     })
@@ -203,15 +211,39 @@ function App() {
   }, [])
 
   const fetchQuotes = async (uid) => {
-    const q = query(collection(db, "users", uid, "quotes"), orderBy("date", "desc"));
-    const querySnapshot = await getDocs(q);
-    const quotesList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    setSavedQuotes(quotesList);
+    try {
+        const q = query(collection(db, "users", uid, "quotes"), orderBy("date", "desc"));
+        const querySnapshot = await getDocs(q);
+        const quotesList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setSavedQuotes(quotesList);
+    } catch (e) {
+        console.error("Erro ao buscar histórico:", e)
+    }
+  }
+
+  // --- NOVA FUNÇÃO DE DELETAR ---
+  const deleteQuote = async (quoteId, e) => {
+    e.stopPropagation(); // Evita que abra o orçamento ao clicar na lixeira
+    
+    if (window.confirm(t('confirmDelete'))) {
+        try {
+            await deleteDoc(doc(db, "users", user.uid, "quotes", quoteId));
+            alert(t('alertDeleted'));
+            fetchQuotes(user.uid); // Atualiza a lista
+        } catch (error) {
+            console.error("Error deleting document: ", error);
+            alert("Erro ao deletar.");
+        }
+    }
   }
 
   const handleLogoChange = (e) => {
     const file = e.target.files[0]
     if (file) {
+      if (file.size > 800000) {
+          alert("Imagem muito grande! Tente uma imagem menor que 800KB.");
+          return;
+      }
       const reader = new FileReader()
       reader.onloadend = () => setCompanyData(prev => ({ ...prev, logo: reader.result }))
       reader.readAsDataURL(file)
@@ -220,20 +252,49 @@ function App() {
 
   const saveCompanyData = async () => {
     if (!user) return;
+    
+    const sanitizedCompanyData = {
+        companyName: companyData.companyName || "",
+        companyPhone: companyData.companyPhone || "",
+        companyEmail: companyData.companyEmail || "",
+        companyAddress: companyData.companyAddress || "",
+        companyWebsite: companyData.companyWebsite || "",
+        companyTerms: companyData.companyTerms || "",
+        logo: companyData.logo || ""
+    };
+
     try {
-      await setDoc(doc(db, "users", user.uid), { email: user.email, company: companyData }, { merge: true })
+      await setDoc(doc(db, "users", user.uid), { 
+          email: user.email || "", 
+          company: sanitizedCompanyData 
+      }, { merge: true })
+      
       alert(t('alertSaved'))
-    } catch (e) { alert("Error: " + e.message) }
+    } catch (e) { 
+        console.error(e);
+        alert("Error: " + e.message) 
+    }
   }
 
   const saveQuoteToHistory = async () => {
     if (!user) return;
-    try {
-      await addDoc(collection(db, "users", user.uid, "quotes"), {
-        ...formData,
+    
+    const sanitizedQuote = {
+        quoteNumber: formData.quoteNumber || "",
+        clientName: formData.clientName || "",
+        clientPhone: formData.clientPhone || "",
+        clientEmail: formData.clientEmail || "",
+        clientAddress: formData.clientAddress || "",
+        materialType: formData.materialType || "",
+        sqft: formData.sqft || "",
+        pricePerSqft: formData.pricePerSqft || "",
+        notes: formData.notes || "",
         total: (Number(formData.sqft) || 0) * (Number(formData.pricePerSqft) || 0),
         date: new Date().toISOString()
-      })
+    };
+
+    try {
+      await addDoc(collection(db, "users", user.uid, "quotes"), sanitizedQuote)
       fetchQuotes(user.uid)
       alert(t('alertQuoteSaved'))
     } catch (e) { alert("Error: " + e.message) }
@@ -266,7 +327,6 @@ function App() {
 
   const total = (Number(formData.sqft) || 0) * (Number(formData.pricePerSqft) || 0)
 
-  // --- PDF EM IDIOMA DINÂMICO ---
   const generatePDF = () => {
     const doc = new jsPDF()
     const dataAtual = new Date().toLocaleDateString()
@@ -278,7 +338,7 @@ function App() {
     const headerX = companyData.logo ? 60 : 20
     doc.setFont("helvetica", "bold")
     doc.setFontSize(18)
-    doc.text(companyData.companyName.toUpperCase() || t('pdfQuote'), headerX, 25)
+    doc.text(companyData.companyName?.toUpperCase() || t('pdfQuote'), headerX, 25)
     
     doc.setFontSize(9)
     doc.setFont("helvetica", "normal")
@@ -327,17 +387,16 @@ function App() {
     const terms = companyData.companyTerms 
       ? companyData.companyTerms + "\n" + formData.notes 
       : formData.notes
-    const splitNotes = doc.splitTextToSize(terms, 170)
+    const splitNotes = doc.splitTextToSize(terms || "", 170)
     doc.text(splitNotes, 20, 148)
 
     doc.setFontSize(14)
     doc.setFont("helvetica", "bold")
     doc.text(`${t('pdfFinalTotal')}: $${total.toFixed(2)}`, 130, 240)
 
-    doc.save(`Quote_${formData.clientName}.pdf`)
+    doc.save(`Quote_${formData.clientName || "Draft"}.pdf`)
   }
 
-  // --- RENDER ---
   if (loading) return <div className="flex h-screen items-center justify-center">{t('loading')}</div>
 
   if (!user) {
@@ -345,7 +404,6 @@ function App() {
       <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
         <div className="bg-white p-10 rounded-xl shadow-xl text-center max-w-md w-full">
           <h1 className="text-3xl font-bold mb-2">{t('appTitle')}</h1>
-          {/* Botões de Idioma na Login Screen */}
           <div className="flex justify-center gap-4 mb-6">
             <button onClick={() => setLang('en')} className={`text-xs font-bold ${lang==='en'?'underline':''}`}>EN</button>
             <button onClick={() => setLang('pt')} className={`text-xs font-bold ${lang==='pt'?'underline':''}`}>PT</button>
@@ -360,10 +418,9 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center py-6 px-2 font-sans text-gray-800">
       
-      {/* Top Bar com Seletor de Idioma */}
       <div className="w-full max-w-2xl flex justify-between items-center mb-4 px-2">
         <div className="flex items-center gap-3">
-            <span className="text-sm font-medium">{t('welcome')}, {user.displayName.split(' ')[0]}</span>
+            <span className="text-sm font-medium">{t('welcome')}, {user.displayName ? user.displayName.split(' ')[0] : ""}</span>
             <div className="flex gap-2 bg-gray-200 px-2 py-1 rounded text-[10px] font-bold">
                 <button onClick={() => setLang('en')} className={lang==='en'?'text-black':'text-gray-400'}>EN</button>
                 <button onClick={() => setLang('pt')} className={lang==='pt'?'text-black':'text-gray-400'}>PT</button>
@@ -381,7 +438,6 @@ function App() {
           <button onClick={() => setActiveTab('company')} className={`flex-1 py-3 font-bold ${activeTab === 'company' ? 'bg-black text-white' : 'text-gray-500'}`}>{t('tabCompany')}</button>
         </div>
 
-        {/* ABA EMPRESA */}
         {activeTab === 'company' && (
           <div className="p-6 space-y-4">
             <h2 className="font-bold border-b pb-2">{t('companyTitle')}</h2>
@@ -403,7 +459,7 @@ function App() {
           </div>
         )}
 
-        {/* ABA HISTÓRICO */}
+        {/* --- ABA HISTÓRICO ATUALIZADA COM BOTÃO DE DELETAR --- */}
         {activeTab === 'history' && (
             <div className="p-4">
                 <h2 className="font-bold mb-4">{t('historyTitle')}</h2>
@@ -415,9 +471,20 @@ function App() {
                                     <p className="font-bold text-sm">{quote.clientName || "-"}</p>
                                     <p className="text-xs text-gray-500">#{quote.quoteNumber} • {quote.materialType}</p>
                                 </div>
-                                <div className="text-right">
-                                    <p className="font-bold">${quote.total?.toFixed(2)}</p>
-                                    <span className="text-xs text-blue-600">{t('openBtn')}</span>
+                                <div className="flex items-center gap-3">
+                                    <div className="text-right">
+                                        <p className="font-bold">${quote.total?.toFixed(2)}</p>
+                                        <span className="text-xs text-blue-600">{t('openBtn')}</span>
+                                    </div>
+                                    
+                                    {/* Botão de Deletar */}
+                                    <button 
+                                        onClick={(e) => deleteQuote(quote.id, e)}
+                                        className="bg-red-100 p-2 rounded text-red-600 hover:bg-red-200 transition"
+                                        title="Apagar"
+                                    >
+                                        🗑️
+                                    </button>
                                 </div>
                             </div>
                         ))}
@@ -426,7 +493,6 @@ function App() {
             </div>
         )}
 
-        {/* ABA NOVO ORÇAMENTO */}
         {activeTab === 'quote' && (
           <div className="p-6 space-y-4">
              <div className="flex justify-between items-center border-b pb-2">
