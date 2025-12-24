@@ -10,7 +10,7 @@ export default function QuoteForm({
   editingId, 
   clearForm,
   clients,
-  services // <--- RECEBENDO A LISTA DE SERVIÇOS
+  services,
 }) {
 
   const handleItemChange = (index, field, value) => {
@@ -19,7 +19,7 @@ export default function QuoteForm({
     setFormData({ ...formData, items: newItems });
   };
 
-  // --- NOVA FUNÇÃO: SELECIONAR SERVIÇO NA LINHA ---
+ 
   const handleSelectServiceForItem = (index, e) => {
       const serviceId = e.target.value;
       if (!serviceId) return;
@@ -27,14 +27,9 @@ export default function QuoteForm({
       const service = services.find(s => s.id === serviceId);
       if (service) {
           const newItems = [...formData.items];
-          // Preenche a descrição e o preço automaticamente
           newItems[index].description = service.description;
           newItems[index].price = service.price;
           setFormData({ ...formData, items: newItems });
-          
-          // Reseta o select para o usuário poder escolher outro se quiser, ou deixa visível.
-          // Aqui vamos resetar o value do select visualmente para "Select...", 
-          // mas os dados já foram para os inputs.
           e.target.value = ""; 
       }
   }
@@ -111,7 +106,7 @@ export default function QuoteForm({
          {formData.items.map((item, index) => (
            <div key={index} className="bg-gray-50 p-3 rounded border border-gray-200 shadow-sm">
               
-              {/* --- NOVO: SELETOR DE SERVIÇO RÁPIDO --- */}
+              
               {services && services.length > 0 && (
                   <div className="mb-2">
                       <select 
@@ -155,7 +150,6 @@ export default function QuoteForm({
                        className="w-full p-2 border rounded text-sm text-center"
                      />
                    </div>
-                   {/* Lixeira alinhada embaixo */}
                    <button onClick={() => removeItem(index)} className="text-red-500 p-2 mt-4 bg-white rounded border border-red-100 hover:bg-red-50">🗑️</button>
                 </div>
               </div>

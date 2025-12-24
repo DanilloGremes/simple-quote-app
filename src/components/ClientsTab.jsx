@@ -6,7 +6,7 @@ export default function ClientsTab({ user, clients, fetchClients, t }) {
   const [formData, setFormData] = useState({ name: '', phone: '', email: '', address: '' });
   const [editingId, setEditingId] = useState(null);
   
-  // 1. Estado para a busca
+  
   const [searchTerm, setSearchTerm] = useState("");
 
   const handleChange = (e) => {
@@ -35,7 +35,7 @@ export default function ClientsTab({ user, clients, fetchClients, t }) {
   const editClient = (client) => {
     setFormData(client);
     setEditingId(client.id);
-    // Rola para o topo para facilitar a edição
+  
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -46,7 +46,7 @@ export default function ClientsTab({ user, clients, fetchClients, t }) {
     }
   };
 
-  // 2. Lógica de Filtro (Busca por Nome, Telefone ou Email)
+
   const filteredClients = clients.filter(client => {
       const term = searchTerm.toLowerCase();
       const name = (client.name || "").toLowerCase();

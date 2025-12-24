@@ -6,10 +6,7 @@ export default function Login({ loginGoogle, t, setLang, lang }) {
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
       <div className="bg-white p-10 rounded-xl shadow-xl text-center max-w-md w-full">
         
-        {/* 2. ADICIONAMOS A TAG DE IMAGEM AQUI */}
-        {/* w-32 define a largura (ajuste se ficar grande/pequeno) */}
-        {/* mx-auto centraliza a imagem */}
-        {/* mb-6 dá um espaço embaixo antes do título */}
+      
         <img src={appLogo} alt="SquarePro Logo" className="w-50 mx-auto" />
         
         <div className="flex justify-center gap-4">

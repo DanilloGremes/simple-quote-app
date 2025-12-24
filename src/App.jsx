@@ -234,25 +234,25 @@ function App() {
     setCompanyData(prev => ({ ...prev, [name]: value }))
   }
 
-// Função atualizada para aceitar o tipo de documento (quote ou invoice)
+
   const generatePDF = (mode = 'quote', quoteData = null) => {
-    // Se passarmos dados diretos (do historico), usa eles. Se não, usa o form atual.
+    
     const data = quoteData || formData;
     const isInvoice = mode === 'invoice';
-    const isPaid = data.status === 'paid' || data.status === 'approved'; // Consideramos approved como pronto para pagar
+    const isPaid = data.status === 'paid' || data.status === 'approved';
 
     const doc = new jsPDF()
     const dataAtual = new Date().toLocaleDateString()
     
-    // Configurações de Cor
-    const primaryColor = isInvoice ? [0, 0, 0] : [0, 0, 0]; // Preto para ambos (minimalista)
-    const headerColor = isInvoice ? [240, 240, 240] : [245, 245, 245]; // Cinza leve
+   
+    const primaryColor = isInvoice ? [0, 0, 0] : [0, 0, 0]; 
+    const headerColor = isInvoice ? [240, 240, 240] : [245, 245, 245]; 
 
     if (companyData.logo) { try { doc.addImage(companyData.logo, 'JPEG', 20, 15, 30, 30) } catch (err) {} }
     const headerX = companyData.logo ? 60 : 20
     
     doc.setFont("helvetica", "bold"); doc.setFontSize(18)
-    // Título muda dependendo do modo
+    
     const title = isInvoice ? (isPaid ? t('pdfReceipt') : t('pdfInvoice')) : (companyData.companyName?.toUpperCase() || t('pdfQuote'));
     doc.text(title, headerX, 25)
     
@@ -261,11 +261,11 @@ function App() {
     doc.text(`${companyData.companyPhone || ""}  ${companyData.companyEmail || ""}`, headerX, 37)
     doc.text(companyData.companyWebsite || "", headerX, 42)
     
-    // Info Lateral
+    
     doc.setFontSize(10)
     doc.text(`${t('pdfDate')}: ${dataAtual}`, 150, 25)
     
-    // Se for Invoice, mostra status de pagamento
+   
     if (isInvoice) {
         doc.setFont("helvetica", "bold");
         if (isPaid) {
@@ -284,7 +284,7 @@ function App() {
     
     doc.setLineWidth(0.5); doc.line(20, 50, 190, 50)
     
-    // Cliente
+    
     doc.setFontSize(12); doc.setFont("helvetica", "bold"); 
     doc.text(isInvoice ? t('pdfBillTo') : t('pdfClient'), 20, 60)
     
@@ -292,7 +292,7 @@ function App() {
     doc.text(`${data.clientName}`, 20, 68); doc.text(`${data.clientAddress}`, 20, 74)
     doc.text(`${data.clientPhone}`, 110, 68); doc.text(`${data.clientEmail}`, 110, 74)
     
-    // Cabeçalho Tabela
+   
     doc.setFillColor(...headerColor); doc.rect(20, 85, 170, 10, "F") 
     doc.setFont("helvetica", "bold"); doc.setFontSize(9)
     doc.text(t('itemDesc'), 25, 92)
@@ -303,7 +303,7 @@ function App() {
     let yPos = 105;
     doc.setFont("helvetica", "normal");
     
-    // Tratamento de Itens (Array ou Legacy)
+   
     let itemsToPrint = data.items || [];
     if (itemsToPrint.length === 0 && data.materialType) {
          itemsToPrint = [{ description: data.materialType, qty: data.sqft, price: data.pricePerSqft }];
@@ -341,15 +341,15 @@ function App() {
   if (!user) return <Login loginGoogle={loginGoogle} t={t} setLang={setLang} lang={lang} />
 
   return (
-    // Adicionei pb-24 aqui para o conteúdo não ficar atrás da barra de navegação
+   
     <div className="min-h-screen bg-gray-50 flex flex-col items-center py-6 px-2 font-sans text-gray-800 pb-24">
       
-      {/* NavBar agora serve como Header simples */}
+    
       <NavBar user={user} t={t} logout={logout} setLang={setLang} lang={lang} />
 
       <div className="bg-white w-full max-w-2xl rounded-xl shadow-lg border border-gray-200 overflow-hidden">
         
-        {/* REMOVIDO: O antigo menu de abas do topo */}
+      
         
         {activeTab === 'dashboard' && <Dashboard savedQuotes={savedQuotes} t={t} setActiveTab={setActiveTab} />}
 
@@ -370,8 +370,7 @@ function App() {
              t={t} 
            />
         )}
-        
-        {/* --- NOVO: ABA MENU --- */}
+      
         {activeTab === 'menu' && (
            <MenuTab 
              setActiveTab={setActiveTab}
@@ -418,7 +417,7 @@ function App() {
         )}
       </div>
 
-      {/* --- NOVA BARRA DE NAVEGAÇÃO --- */}
+     
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} t={t} />
 
     </div>

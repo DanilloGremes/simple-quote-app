@@ -2,11 +2,11 @@ import React from 'react';
 
 export default function Dashboard({ savedQuotes, t, setActiveTab }) {
   
-  // Filtrando por status
+ 
   const pendingQuotes = savedQuotes.filter(q => !q.status || q.status === 'pending');
   const approvedQuotes = savedQuotes.filter(q => q.status === 'approved' || q.status === 'paid');
 
-  // Somando valores
+
   const totalPending = pendingQuotes.reduce((acc, q) => acc + (Number(q.total) || 0), 0);
   const totalApproved = approvedQuotes.reduce((acc, q) => acc + (Number(q.total) || 0), 0);
 

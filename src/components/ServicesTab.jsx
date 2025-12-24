@@ -6,7 +6,7 @@ export default function ServicesTab({ user, services, fetchServices, t }) {
   const [formData, setFormData] = useState({ description: '', price: '' });
   const [editingId, setEditingId] = useState(null);
 
-  // Filtro de busca
+ 
   const [searchTerm, setSearchTerm] = useState("");
 
   const handleChange = (e) => {
