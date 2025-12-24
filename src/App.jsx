@@ -41,7 +41,7 @@ function App() {
     companyAddress: '', companyWebsite: '', companyTerms: '', logo: ''
   })
 
-  // --- MUDANÇA 2: Cálculo do Total percorrendo o array
+  
   const total = formData.items.reduce((acc, item) => {
       return acc + ((Number(item.qty) || 0) * (Number(item.price) || 0));
   }, 0);
@@ -77,7 +77,6 @@ function App() {
     } catch (e) { console.error(e) }
   }
 
-  // Função updateStatus (mantida)
   const updateStatus = async (quoteId, newStatus, e) => {
       e.stopPropagation();
       try {
@@ -102,9 +101,7 @@ function App() {
   const startEditing = (quote, e) => {
     e.stopPropagation(); 
     setEditingId(quote.id);
-    
-    // --- MUDANÇA 3: Compatibilidade com dados antigos (LEGACY DATA)
-    // Se o orçamento antigo não tem 'items', criamos um item baseado nos campos antigos
+ 
     let loadedItems = quote.items || [];
     if (loadedItems.length === 0 && quote.materialType) {
         loadedItems = [{
@@ -113,7 +110,7 @@ function App() {
             price: quote.pricePerSqft
         }];
     }
-    // Se mesmo assim estiver vazio, cria linha em branco
+  
     if (loadedItems.length === 0) loadedItems = [{ description: '', qty: '', price: '' }];
 
     setFormData({ 
@@ -126,7 +123,7 @@ function App() {
   }
 
   const loadQuoteView = (quote) => {
-    // Mesma lógica de compatibilidade aqui
+  
     let loadedItems = quote.items || [];
     if (loadedItems.length === 0 && quote.materialType) {
         loadedItems = [{ description: quote.materialType, qty: quote.sqft, price: quote.pricePerSqft }];
@@ -175,8 +172,7 @@ function App() {
   const saveQuote = async () => {
     if (!user) return;
     
-    // --- MUDANÇA 4: Salvamos o array de items e usamos campos antigos apenas como "resumo" do primeiro item (opcional)
-    // Isso ajuda a manter a lista de histórico funcionando sem quebrar
+  
     const mainItem = formData.items[0] || {};
     
     const sanitizedQuote = {
@@ -186,12 +182,12 @@ function App() {
         clientEmail: formData.clientEmail || "",
         clientAddress: formData.clientAddress || "",
         notes: formData.notes || "",
-        items: formData.items, // Salvando o array
+        items: formData.items, 
         
-        // Campos legacy para a lista exibir algo
+      
         materialType: mainItem.description || "Multi-services",
         
-        total: total, // Usando o total calculado pelo array
+        total: total, 
         date: new Date().toISOString()
     };
     
@@ -208,16 +204,11 @@ function App() {
     } catch (e) { alert("Error: " + e.message) }
   }
 
-  // (handleChange removido daqui pois agora está dentro do QuoteForm ou passado via prop se necessário, 
-  // mas como o QuoteForm gerencia input simples, precisamos passar o setFormData)
-  // --- ATENÇÃO: No QuoteForm, eu usei setFormData direto.
-
   const handleCompanyChange = (e) => {
     const { name, value } = e.target
     setCompanyData(prev => ({ ...prev, [name]: value }))
   }
 
-  // --- MUDANÇA 5: PDF Complexo com Loop
   const generatePDF = () => {
     const doc = new jsPDF()
     const dataAtual = new Date().toLocaleDateString()
@@ -257,7 +248,7 @@ function App() {
         doc.text(String(item.qty || 0), 110, yPos)
         doc.text(`$${Number(item.price).toFixed(2)}`, 140, yPos)
         doc.text(`$${itemTotal.toFixed(2)}`, 170, yPos)
-        yPos += 8; // Pula linha
+        yPos += 8; 
     });
 
     // Linha final

@@ -3,8 +3,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/
 import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
 import { getAnalytics } from "firebase/analytics";
 
-// --- ÁREA DE COLAGEM ---
-// Cole a constante 'firebaseConfig' que você pegou no console do Firebase aqui em baixo:
+// --- CONFIGURAÇÕES ---
 const firebaseConfig = {
   apiKey: "AIzaSyC1MM4AQBtGZvMt52--4KgQBh72LE8vyOA",
   authDomain: "simple-quote-app-1c167.firebaseapp.com",

@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'SquarePro Quote',
+        name: 'SquarePro',
         short_name: 'SquarePro',
-        description: 'Gerador de orçamentos para profissionais',
+        description: 'Estimation and project management tool',
         theme_color: '#000000',
         background_color: '#ffffff',
         display: 'standalone',
