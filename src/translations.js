@@ -35,6 +35,9 @@ export const translations = {
     openBtn: "Abrir",
     confirmDelete: "Tem certeza que deseja apagar este orçamento?",
     alertDeleted: "Orçamento apagado com sucesso!",
+    shareMsg: "Olá! Segue o orçamento para *{material}*.\n\nTotal estimado: *${total}*.\n\nFico no aguardo!",
+    btnShare: "Compartilhar",
+    msgCopied: "Texto copiado para a área de transferência!",
     
     clientTitle: "Cliente",
     quoteNumberPH: "Orç. #",
@@ -99,6 +102,9 @@ export const translations = {
     openBtn: "Open",
     confirmDelete: "Are you sure you want to delete this quote?",
     alertDeleted: "Quote deleted successfully!",
+    shareMsg: "Hello! Here is the quote for *{material}*.\n\nEstimated Total: *${total}*.\n\nLet me know!",
+    btnShare: "Share",
+    msgCopied: "Text copied to clipboard!",
     
     clientTitle: "Client Info",
     quoteNumberPH: "Quote #",
@@ -162,6 +168,9 @@ export const translations = {
     openBtn: "Abrir",
     confirmDelete: "¿Estás seguro de que quieres borrar este presupuesto?",
     alertDeleted: "¡Presupuesto borrado!",
+    shareMsg: "¡Hola! Aquí el presupuesto para *{material}*.\n\nTotal estimado: *${total}*.\n\n¡Quedo a la espera!",
+    btnShare: "Compartir",
+    msgCopied: "¡Texto copiado al portapapeles!",
     
     clientTitle: "Cliente",
     quoteNumberPH: "Presup. #",
