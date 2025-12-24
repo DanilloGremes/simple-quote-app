@@ -176,8 +176,10 @@ function App() {
     } catch (e) { alert("Error: " + e.message) }
   }
 
-  const saveQuote = async () => {
+const saveQuote = async () => {
     if (!user) return;
+    
+    // 1. Prepara os dados do Orçamento
     const mainItem = formData.items[0] || {};
     const sanitizedQuote = {
         quoteNumber: formData.quoteNumber || "",
@@ -191,14 +193,37 @@ function App() {
         total: total,
         date: new Date().toISOString()
     };
+    
     try {
+      // 2. Salva ou Atualiza o Orçamento (Lógica que já existia)
       if (editingId) {
           await updateDoc(doc(db, "users", user.uid, "quotes", editingId), sanitizedQuote);
           alert(t('alertQuoteUpdated'));
       } else {
           await addDoc(collection(db, "users", user.uid, "quotes"), sanitizedQuote);
           alert(t('alertQuoteSaved'));
+
+          // --- NOVIDADE: AUTO-SAVE DO CLIENTE ---
+          // Só executa se for um NOVO orçamento (!editingId) e tiver nome do cliente
+          if (formData.clientName) {
+              // Verifica se já existe alguém com esse nome na lista (para evitar duplicatas)
+              const clientExists = clients.some(c => c.name.toLowerCase() === formData.clientName.toLowerCase());
+              
+              if (!clientExists) {
+                  // Se não existe, cria o cliente automaticamente
+                  await addDoc(collection(db, "users", user.uid, "clients"), {
+                      name: formData.clientName,
+                      phone: formData.clientPhone,
+                      email: formData.clientEmail,
+                      address: formData.clientAddress
+                  });
+                  // Atualiza a lista de clientes na hora
+                  fetchClients(user.uid); 
+                  console.log("Cliente salvo automaticamente!");
+              }
+          }
       }
+      
       fetchQuotes(user.uid);
       clearForm();
     } catch (e) { alert("Error: " + e.message) }
