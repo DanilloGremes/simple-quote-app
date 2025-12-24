@@ -1,10 +1,21 @@
 import React from 'react';
+// 1. IMPORTAMOS A IMAGEM DA PASTA ASSETS
+// (Certifique-se que o nome do arquivo aqui bate com o que você salvou na pasta)
+import appLogo from '../assets/logo.png'; 
 
 export default function Login({ loginGoogle, t, setLang, lang }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
       <div className="bg-white p-10 rounded-xl shadow-xl text-center max-w-md w-full">
+        
+        {/* 2. ADICIONAMOS A TAG DE IMAGEM AQUI */}
+        {/* w-32 define a largura (ajuste se ficar grande/pequeno) */}
+        {/* mx-auto centraliza a imagem */}
+        {/* mb-6 dá um espaço embaixo antes do título */}
+        <img src={appLogo} alt="SquarePro Logo" className="w-32 mx-auto mb-6" />
+
         <h1 className="text-3xl font-bold mb-2">{t('appTitle')}</h1>
+        
         <div className="flex justify-center gap-4 mb-6">
           <button onClick={() => setLang('en')} className={`text-xs font-bold ${lang==='en'?'underline':''}`}>EN</button>
           <button onClick={() => setLang('pt')} className={`text-xs font-bold ${lang==='pt'?'underline':''}`}>PT</button>
