@@ -1,6 +1,10 @@
 // --- DICIONÁRIO DE TRADUÇÕES ---
 export const translations = {
   pt: {
+    tabHome: "HOME",
+    dashTotal: "Total Orçado",
+    dashCount: "Orçamentos",
+    dashAvg: "Ticket Médio",
     appTitle: "SquarePro Quote",
     loginBtn: "Entrar com Google",
     loading: "Carregando...",
@@ -53,8 +57,13 @@ export const translations = {
     pdfTotal: "TOTAL",
     pdfTerms: "Notas / Termos",
     pdfFinalTotal: "TOTAL FINAL"
+
   },
   en: {
+    tabHome: "HOME",
+    dashTotal: "Total Quoted",
+    dashCount: "Quotes Sent",
+    dashAvg: "Average Ticket",
     appTitle: "SquarePro Quote",
     loginBtn: "Sign in with Google",
     loading: "Loading...",
@@ -109,6 +118,10 @@ export const translations = {
     pdfFinalTotal: "GRAND TOTAL"
   },
   es: {
+    tabHome: "INICIO",
+    dashTotal: "Total Cotizado",
+    dashCount: "Presupuestos",
+    dashAvg: "Ticket Promedio",
     appTitle: "SquarePro Quote",
     loginBtn: "Entrar con Google",
     loading: "Cargando...",

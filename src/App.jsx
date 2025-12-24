@@ -4,18 +4,21 @@ import { auth, db, loginGoogle, logout } from './firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { doc, getDoc, setDoc, collection, addDoc, updateDoc, deleteDoc, getDocs, query, orderBy } from 'firebase/firestore'
 
-// IMPORTAÇÃO DOS COMPONENTES
 import { translations } from './translations'
 import Login from './components/Login'
 import NavBar from './components/NavBar'
 import QuoteForm from './components/QuoteForm'
 import CompanySettings from './components/CompanySettings'
 import HistoryList from './components/HistoryList'
+import Dashboard from './components/Dashboard' // <--- IMPORTADO AQUI
 
 function App() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('quote') 
+  
+  // MUDANÇA: Começa na aba 'dashboard' agora
+  const [activeTab, setActiveTab] = useState('dashboard') 
+  
   const [savedQuotes, setSavedQuotes] = useState([])
   const [editingId, setEditingId] = useState(null)
   
@@ -86,7 +89,7 @@ function App() {
   const startEditing = (quote, e) => {
     e.stopPropagation(); 
     setEditingId(quote.id);
-    setFormData({ ...quote }); 
+    setFormData({ ...quote });
     setActiveTab('quote');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -163,7 +166,6 @@ function App() {
 
   const total = (Number(formData.sqft) || 0) * (Number(formData.pricePerSqft) || 0)
 
-  // GERAÇÃO DE PDF COM JSPDF
   const generatePDF = () => {
     const doc = new jsPDF()
     const dataAtual = new Date().toLocaleDateString()
@@ -207,14 +209,21 @@ function App() {
 
       <div className="bg-white w-full max-w-2xl rounded-xl shadow-lg border border-gray-200 overflow-hidden">
         
-        {/* MENU TABS */}
+        {/* MENU TABS (ATUALIZADO COM 4 ABAS) */}
         <div className="flex border-b border-gray-200 text-xs md:text-sm">
+          {/* Nova aba HOME */}
+          <button onClick={() => setActiveTab('dashboard')} className={`flex-1 py-3 font-bold ${activeTab === 'dashboard' ? 'bg-black text-white' : 'text-gray-500'}`}>{t('tabHome')}</button>
+          
           <button onClick={() => setActiveTab('quote')} className={`flex-1 py-3 font-bold ${activeTab === 'quote' ? 'bg-black text-white' : 'text-gray-500'}`}>{t('tabNew')}</button>
           <button onClick={() => setActiveTab('history')} className={`flex-1 py-3 font-bold ${activeTab === 'history' ? 'bg-black text-white' : 'text-gray-500'}`}>{t('tabHistory')}</button>
           <button onClick={() => setActiveTab('company')} className={`flex-1 py-3 font-bold ${activeTab === 'company' ? 'bg-black text-white' : 'text-gray-500'}`}>{t('tabCompany')}</button>
         </div>
 
-        {/* COMPONENTES RENDERIZADOS CONDICIONALMENTE */}
+        {/* --- RENDERIZAÇÃO DO DASHBOARD --- */}
+        {activeTab === 'dashboard' && (
+          <Dashboard savedQuotes={savedQuotes} t={t} setActiveTab={setActiveTab} />
+        )}
+
         {activeTab === 'company' && (
           <CompanySettings 
             companyData={companyData} 
