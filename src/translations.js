@@ -66,6 +66,13 @@ export const translations = {
     pdfTerms: "Notas / Termos",
     pdfFinalTotal: "TOTAL FINAL"
 
+    itemDesc: "Descrição",
+    itemQty: "Qtd/Área",
+    itemPrice: "Preço Unit.",
+    itemTotal: "Subtotal",
+    btnAddItem: "Adicionar Item",
+    btnRemove: "Remover",
+
   },
   en: {
     tabHome: "HOME",
@@ -132,6 +139,13 @@ export const translations = {
     pdfTotal: "TOTAL",
     pdfTerms: "Notes / Terms",
     pdfFinalTotal: "GRAND TOTAL"
+
+    itemDesc: "Description",
+    itemQty: "Qty/Area",
+    itemPrice: "Unit Price",
+    itemTotal: "Subtotal",
+    btnAddItem: "Add Item",
+    btnRemove: "Remove",
   },
   es: {
     tabHome: "INICIO",
@@ -198,5 +212,12 @@ export const translations = {
     pdfTotal: "TOTAL",
     pdfTerms: "Notas / Términos",
     pdfFinalTotal: "TOTAL FINAL"
+
+    itemDesc: "Descripción",
+    itemQty: "Cant/Área",
+    itemPrice: "Precio Unit.",
+    itemTotal: "Subtotal",
+    btnAddItem: "Agregar Item",
+    btnRemove: "Eliminar",
   }
 }

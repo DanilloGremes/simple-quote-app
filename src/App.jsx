@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { jsPDF } from "jspdf"
+import 'jspdf-autotable' // Opcional: Se quiser tabelas bonitas no futuro, mas vamos fazer manual por enquanto
 import { auth, db, loginGoogle, logout } from './firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { doc, getDoc, setDoc, collection, addDoc, updateDoc, deleteDoc, getDocs, query, orderBy } from 'firebase/firestore'
@@ -15,9 +16,7 @@ import Dashboard from './components/Dashboard'
 function App() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
-  
   const [activeTab, setActiveTab] = useState('dashboard') 
-  
   const [savedQuotes, setSavedQuotes] = useState([])
   const [editingId, setEditingId] = useState(null)
   
@@ -30,9 +29,11 @@ function App() {
 
   const t = (key) => translations[lang][key] || key
 
+  // --- MUDANÇA 1: Estrutura inicial agora tem um array 'items'
   const initialFormState = {
     quoteNumber: '', clientName: '', clientPhone: '', clientEmail: '', clientAddress: '',
-    materialType: '', sqft: '', pricePerSqft: '', notes: ''
+    notes: '',
+    items: [{ description: '', qty: '', price: '' }] 
   }
 
   const [formData, setFormData] = useState(initialFormState)
@@ -41,6 +42,11 @@ function App() {
     companyName: '', companyPhone: '', companyEmail: '', 
     companyAddress: '', companyWebsite: '', companyTerms: '', logo: ''
   })
+
+  // --- MUDANÇA 2: Cálculo do Total percorrendo o array
+  const total = formData.items.reduce((acc, item) => {
+      return acc + ((Number(item.qty) || 0) * (Number(item.price) || 0));
+  }, 0);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -73,6 +79,16 @@ function App() {
     } catch (e) { console.error(e) }
   }
 
+  // Função updateStatus (mantida)
+  const updateStatus = async (quoteId, newStatus, e) => {
+      e.stopPropagation();
+      try {
+          const quoteRef = doc(db, "users", user.uid, "quotes", quoteId);
+          await updateDoc(quoteRef, { status: newStatus });
+          setSavedQuotes(prev => prev.map(q => q.id === quoteId ? { ...q, status: newStatus } : q));
+      } catch (error) { console.error(error) }
+  }
+
   const deleteQuote = async (quoteId, e) => {
     e.stopPropagation(); 
     if (window.confirm(t('confirmDelete'))) {
@@ -85,28 +101,41 @@ function App() {
     }
   }
 
-  
-  const updateStatus = async (quoteId, newStatus, e) => {
-      e.stopPropagation(); // Evita abrir o orçamento
-      try {
-          const quoteRef = doc(db, "users", user.uid, "quotes", quoteId);
-          await updateDoc(quoteRef, { status: newStatus });
-          setSavedQuotes(prev => prev.map(q => q.id === quoteId ? { ...q, status: newStatus } : q));
-      } catch (error) {
-          console.error("Erro ao atualizar status:", error);
-      }
-  }
-
   const startEditing = (quote, e) => {
     e.stopPropagation(); 
     setEditingId(quote.id);
-    setFormData({ ...quote });
+    
+    // --- MUDANÇA 3: Compatibilidade com dados antigos (LEGACY DATA)
+    // Se o orçamento antigo não tem 'items', criamos um item baseado nos campos antigos
+    let loadedItems = quote.items || [];
+    if (loadedItems.length === 0 && quote.materialType) {
+        loadedItems = [{
+            description: quote.materialType,
+            qty: quote.sqft,
+            price: quote.pricePerSqft
+        }];
+    }
+    // Se mesmo assim estiver vazio, cria linha em branco
+    if (loadedItems.length === 0) loadedItems = [{ description: '', qty: '', price: '' }];
+
+    setFormData({ 
+        ...quote, 
+        items: loadedItems 
+    });
+    
     setActiveTab('quote');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   const loadQuoteView = (quote) => {
-    setFormData({ ...quote })
+    // Mesma lógica de compatibilidade aqui
+    let loadedItems = quote.items || [];
+    if (loadedItems.length === 0 && quote.materialType) {
+        loadedItems = [{ description: quote.materialType, qty: quote.sqft, price: quote.pricePerSqft }];
+    }
+    if (loadedItems.length === 0) loadedItems = [{ description: '', qty: '', price: '' }];
+
+    setFormData({ ...quote, items: loadedItems })
     setEditingId(null); 
     setActiveTab('quote')
   }
@@ -147,11 +176,27 @@ function App() {
 
   const saveQuote = async () => {
     if (!user) return;
+    
+    // --- MUDANÇA 4: Salvamos o array de items e usamos campos antigos apenas como "resumo" do primeiro item (opcional)
+    // Isso ajuda a manter a lista de histórico funcionando sem quebrar
+    const mainItem = formData.items[0] || {};
+    
     const sanitizedQuote = {
-        ...formData,
-        total: (Number(formData.sqft) || 0) * (Number(formData.pricePerSqft) || 0),
+        quoteNumber: formData.quoteNumber || "",
+        clientName: formData.clientName || "",
+        clientPhone: formData.clientPhone || "",
+        clientEmail: formData.clientEmail || "",
+        clientAddress: formData.clientAddress || "",
+        notes: formData.notes || "",
+        items: formData.items, // Salvando o array
+        
+        // Campos legacy para a lista exibir algo
+        materialType: mainItem.description || "Multi-services",
+        
+        total: total, // Usando o total calculado pelo array
         date: new Date().toISOString()
     };
+    
     try {
       if (editingId) {
           await updateDoc(doc(db, "users", user.uid, "quotes", editingId), sanitizedQuote);
@@ -165,18 +210,16 @@ function App() {
     } catch (e) { alert("Error: " + e.message) }
   }
 
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
-  }
+  // (handleChange removido daqui pois agora está dentro do QuoteForm ou passado via prop se necessário, 
+  // mas como o QuoteForm gerencia input simples, precisamos passar o setFormData)
+  // --- ATENÇÃO: No QuoteForm, eu usei setFormData direto.
 
   const handleCompanyChange = (e) => {
     const { name, value } = e.target
     setCompanyData(prev => ({ ...prev, [name]: value }))
   }
 
-  const total = (Number(formData.sqft) || 0) * (Number(formData.pricePerSqft) || 0)
-
+  // --- MUDANÇA 5: PDF Complexo com Loop
   const generatePDF = () => {
     const doc = new jsPDF()
     const dataAtual = new Date().toLocaleDateString()
@@ -197,16 +240,42 @@ function App() {
     doc.setFont("helvetica", "normal"); doc.setFontSize(10)
     doc.text(`${formData.clientName}`, 20, 68); doc.text(`${formData.clientAddress}`, 20, 74)
     doc.text(`${formData.clientPhone}`, 110, 68); doc.text(`${formData.clientEmail}`, 110, 74)
-    doc.setFillColor(245, 245, 245); doc.rect(20, 85, 170, 40, "F")
-    doc.setFont("helvetica", "bold"); doc.text(t('pdfDesc'), 25, 95); doc.text(t('pdfTotal'), 160, 95)
-    doc.setFont("helvetica", "normal"); doc.text(formData.materialType || "-", 25, 105)
-    doc.text(`${formData.sqft} sqft  x  $${formData.pricePerSqft}`, 25, 115)
-    doc.setFont("helvetica", "bold"); doc.text(`$${total.toFixed(2)}`, 160, 105)
-    doc.text(t('pdfTerms') + ":", 20, 140); doc.setFont("helvetica", "normal")
+    doc.setFillColor(245, 245, 245); doc.rect(20, 85, 170, 10, "F") // Cabeçalho menor
+    
+    // --- CABEÇALHO DA TABELA NO PDF
+    doc.setFont("helvetica", "bold"); doc.setFontSize(9)
+    doc.text(t('itemDesc'), 25, 92)
+    doc.text(t('itemQty'), 110, 92)
+    doc.text(t('itemPrice'), 140, 92)
+    doc.text(t('itemTotal'), 170, 92)
+
+    // --- LOOP DOS ITENS
+    let yPos = 105;
+    doc.setFont("helvetica", "normal");
+    
+    formData.items.forEach(item => {
+        const itemTotal = (Number(item.qty) || 0) * (Number(item.price) || 0);
+        doc.text(item.description || "-", 25, yPos)
+        doc.text(String(item.qty || 0), 110, yPos)
+        doc.text(`$${Number(item.price).toFixed(2)}`, 140, yPos)
+        doc.text(`$${itemTotal.toFixed(2)}`, 170, yPos)
+        yPos += 8; // Pula linha
+    });
+
+    // Linha final
+    doc.line(100, yPos, 190, yPos)
+    yPos += 8;
+    
+    doc.setFont("helvetica", "bold"); doc.setFontSize(12)
+    doc.text(`${t('pdfFinalTotal')}: $${total.toFixed(2)}`, 120, yPos)
+
+    yPos += 15;
+    doc.setFontSize(10); doc.text(t('pdfTerms') + ":", 20, yPos)
+    doc.setFont("helvetica", "normal")
     const terms = companyData.companyTerms ? companyData.companyTerms + "\n" + formData.notes : formData.notes
-    const splitNotes = doc.splitTextToSize(terms || "", 170); doc.text(splitNotes, 20, 148)
-    doc.setFontSize(14); doc.setFont("helvetica", "bold")
-    doc.text(`${t('pdfFinalTotal')}: $${total.toFixed(2)}`, 130, 240)
+    const splitNotes = doc.splitTextToSize(terms || "", 170); 
+    doc.text(splitNotes, 20, yPos + 6)
+    
     doc.save(`Quote_${formData.clientName || "Draft"}.pdf`)
   }
 
@@ -220,20 +289,14 @@ function App() {
 
       <div className="bg-white w-full max-w-2xl rounded-xl shadow-lg border border-gray-200 overflow-hidden">
         
-        {/* MENU TABS (ATUALIZADO COM 4 ABAS) */}
         <div className="flex border-b border-gray-200 text-xs md:text-sm">
-          {/* Nova aba HOME */}
           <button onClick={() => setActiveTab('dashboard')} className={`flex-1 py-3 font-bold ${activeTab === 'dashboard' ? 'bg-black text-white' : 'text-gray-500'}`}>{t('tabHome')}</button>
-          
           <button onClick={() => setActiveTab('quote')} className={`flex-1 py-3 font-bold ${activeTab === 'quote' ? 'bg-black text-white' : 'text-gray-500'}`}>{t('tabNew')}</button>
           <button onClick={() => setActiveTab('history')} className={`flex-1 py-3 font-bold ${activeTab === 'history' ? 'bg-black text-white' : 'text-gray-500'}`}>{t('tabHistory')}</button>
           <button onClick={() => setActiveTab('company')} className={`flex-1 py-3 font-bold ${activeTab === 'company' ? 'bg-black text-white' : 'text-gray-500'}`}>{t('tabCompany')}</button>
         </div>
 
-        {/* --- RENDERIZAÇÃO DO DASHBOARD --- */}
-        {activeTab === 'dashboard' && (
-          <Dashboard savedQuotes={savedQuotes} t={t} setActiveTab={setActiveTab} />
-        )}
+        {activeTab === 'dashboard' && <Dashboard savedQuotes={savedQuotes} t={t} setActiveTab={setActiveTab} />}
 
         {activeTab === 'company' && (
           <CompanySettings 
@@ -259,7 +322,7 @@ function App() {
         {activeTab === 'quote' && (
             <QuoteForm 
                 formData={formData}
-                handleChange={handleChange}
+                setFormData={setFormData} // Passando setter
                 saveQuote={saveQuote}
                 generatePDF={generatePDF}
                 t={t}
