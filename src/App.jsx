@@ -10,13 +10,12 @@ import NavBar from './components/NavBar'
 import QuoteForm from './components/QuoteForm'
 import CompanySettings from './components/CompanySettings'
 import HistoryList from './components/HistoryList'
-import Dashboard from './components/Dashboard' // <--- IMPORTADO AQUI
+import Dashboard from './components/Dashboard'
 
 function App() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   
-  // MUDANÇA: Começa na aba 'dashboard' agora
   const [activeTab, setActiveTab] = useState('dashboard') 
   
   const [savedQuotes, setSavedQuotes] = useState([])
@@ -84,6 +83,18 @@ function App() {
             fetchQuotes(user.uid); 
         } catch (error) { alert("Error deleting document"); }
     }
+  }
+
+  
+  const updateStatus = async (quoteId, newStatus, e) => {
+      e.stopPropagation(); // Evita abrir o orçamento
+      try {
+          const quoteRef = doc(db, "users", user.uid, "quotes", quoteId);
+          await updateDoc(quoteRef, { status: newStatus });
+          setSavedQuotes(prev => prev.map(q => q.id === quoteId ? { ...q, status: newStatus } : q));
+      } catch (error) {
+          console.error("Erro ao atualizar status:", error);
+      }
   }
 
   const startEditing = (quote, e) => {
@@ -240,6 +251,7 @@ function App() {
             loadQuoteView={loadQuoteView}
             startEditing={startEditing}
             deleteQuote={deleteQuote}
+            updateStatus={updateStatus}
             t={t}
            />
         )}

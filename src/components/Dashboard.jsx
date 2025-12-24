@@ -1,42 +1,40 @@
 import React from 'react';
 
 export default function Dashboard({ savedQuotes, t, setActiveTab }) {
-  // 1. Calcular o Total de Dinheiro Orçado
-  const totalValue = savedQuotes.reduce((acc, quote) => acc + (Number(quote.total) || 0), 0);
+  
+  // Filtrando por status
+  const pendingQuotes = savedQuotes.filter(q => !q.status || q.status === 'pending');
+  const approvedQuotes = savedQuotes.filter(q => q.status === 'approved' || q.status === 'paid');
 
-  // 2. Contar quantos orçamentos existem
-  const count = savedQuotes.length;
-
-  // 3. Calcular a Média (Total / Quantidade)
-  const average = count > 0 ? totalValue / count : 0;
+  // Somando valores
+  const totalPending = pendingQuotes.reduce((acc, q) => acc + (Number(q.total) || 0), 0);
+  const totalApproved = approvedQuotes.reduce((acc, q) => acc + (Number(q.total) || 0), 0);
 
   return (
     <div className="p-6 space-y-6">
-      {/* CARD PRETO (DESTAQUE) */}
-      <div className="bg-black text-white p-6 rounded-xl shadow-lg">
-        <p className="text-xs text-gray-400 font-bold tracking-widest uppercase mb-1">{t('dashTotal')}</p>
-        <h2 className="text-4xl font-bold">${totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h2>
+      
+      {/* CARD DE APROVADOS (DINHEIRO GARANTIDO) */}
+      <div className="bg-green-600 text-white p-6 rounded-xl shadow-lg relative overflow-hidden">
+        <div className="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4">
+            <span className="text-9xl">💰</span>
+        </div>
+        <p className="text-xs text-green-100 font-bold tracking-widest uppercase mb-1">{t('statusApproved')} / {t('statusPaid')}</p>
+        <h2 className="text-4xl font-bold">${totalApproved.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h2>
+        <p className="text-xs text-green-200 mt-2">{approvedQuotes.length} {t('dashCount')}</p>
       </div>
 
-      {/* GRID COM OS OUTROS DOIS CARDS */}
-      <div className="grid grid-cols-2 gap-4">
-        
-        <div className="bg-white border border-gray-200 p-4 rounded-xl shadow-sm">
-          <p className="text-xs text-gray-500 font-bold uppercase mb-1">{t('dashCount')}</p>
-          <h3 className="text-2xl font-bold text-gray-800">{count}</h3>
-        </div>
-
-        <div className="bg-white border border-gray-200 p-4 rounded-xl shadow-sm">
-          <p className="text-xs text-gray-500 font-bold uppercase mb-1">{t('dashAvg')}</p>
-          <h3 className="text-2xl font-bold text-gray-800">${average.toLocaleString('en-US', { minimumFractionDigits: 0 })}</h3>
-        </div>
+      {/* CARD DE PENDENTES (DINHEIRO POTENCIAL) */}
+      <div className="bg-yellow-500 text-white p-6 rounded-xl shadow-lg relative overflow-hidden">
+        <p className="text-xs text-yellow-100 font-bold tracking-widest uppercase mb-1">{t('statusPending')}</p>
+        <h2 className="text-3xl font-bold">${totalPending.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h2>
+        <p className="text-xs text-yellow-100 mt-2">{pendingQuotes.length} {t('dashCount')}</p>
       </div>
 
-      {/* BOTÃO DE AÇÃO RÁPIDA */}
-      <div className="mt-8">
+      {/* BOTÃO DE AÇÃO */}
+      <div className="mt-4">
         <button 
             onClick={() => setActiveTab('quote')}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-md transition transform hover:scale-[1.02]"
+            className="w-full bg-black hover:bg-gray-800 text-white font-bold py-4 rounded-xl shadow-md transition"
         >
             + {t('tabNew')}
         </button>
