@@ -64,7 +64,7 @@ export const translations = {
     pdfDesc: "DESCRIÇÃO",
     pdfTotal: "TOTAL",
     pdfTerms: "Notas / Termos",
-    pdfFinalTotal: "TOTAL FINAL"
+    pdfFinalTotal: "TOTAL FINAL",
 
     itemDesc: "Descrição",
     itemQty: "Qtd/Área",
@@ -138,7 +138,7 @@ export const translations = {
     pdfDesc: "DESCRIPTION",
     pdfTotal: "TOTAL",
     pdfTerms: "Notes / Terms",
-    pdfFinalTotal: "GRAND TOTAL"
+    pdfFinalTotal: "GRAND TOTAL",
 
     itemDesc: "Description",
     itemQty: "Qty/Area",
@@ -211,7 +211,7 @@ export const translations = {
     pdfDesc: "DESCRIPCIÓN",
     pdfTotal: "TOTAL",
     pdfTerms: "Notas / Términos",
-    pdfFinalTotal: "TOTAL FINAL"
+    pdfFinalTotal: "TOTAL FINAL",
 
     itemDesc: "Descripción",
     itemQty: "Cant/Área",
