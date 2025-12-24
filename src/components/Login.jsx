@@ -10,11 +10,9 @@ export default function Login({ loginGoogle, t, setLang, lang }) {
         {/* w-32 define a largura (ajuste se ficar grande/pequeno) */}
         {/* mx-auto centraliza a imagem */}
         {/* mb-6 dá um espaço embaixo antes do título */}
-        <img src={appLogo} alt="SquarePro Logo" className="w-40 mx-auto mb-6" />
-
-        <h1 className="text-3xl font-bold mb-2">{t('appTitle')}</h1>
+        <img src={appLogo} alt="SquarePro Logo" className="w-50 mx-auto" />
         
-        <div className="flex justify-center gap-4 mb-6">
+        <div className="flex justify-center gap-4">
           <button onClick={() => setLang('en')} className={`text-xs font-bold ${lang==='en'?'underline':''}`}>EN</button>
           <button onClick={() => setLang('pt')} className={`text-xs font-bold ${lang==='pt'?'underline':''}`}>PT</button>
           <button onClick={() => setLang('es')} className={`text-xs font-bold ${lang==='es'?'underline':''}`}>ES</button>

@@ -13,8 +13,8 @@ import HistoryList from './components/HistoryList'
 import Dashboard from './components/Dashboard'
 import ClientsTab from './components/ClientsTab'
 import ServicesTab from './components/ServicesTab'
-import BottomNav from './components/bottomNav' // --- NOVO
-import MenuTab from './components/MenuTab'     // --- NOVO
+import BottomNav from './components/bottomNav'
+import MenuTab from './components/MenuTab'     
 
 function App() {
   const [user, setUser] = useState(null)

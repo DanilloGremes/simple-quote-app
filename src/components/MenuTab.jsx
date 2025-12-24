@@ -44,7 +44,7 @@ export default function MenuTab({ setActiveTab, t, logout }) {
         />
       </div>
       
-      <p className="text-center text-xs text-gray-400 mt-8">SquarePro v1.0.0</p>
+      <p className="text-center text-xs text-gray-400 mt-8">SquarePro v1 by DanilloGremes.com </p>
     </div>
   );
 }
