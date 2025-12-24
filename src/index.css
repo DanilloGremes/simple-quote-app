@@ -3,6 +3,6 @@
 @tailwind utilities;
 
 body {
-  background-color: #f3f4f6;
-  color: #111827;
+  font-family: 'Inter', sans-serif;
+  background-color: #FAFAFA; /* Um cinza quase branco, mais chique que branco puro */
 }

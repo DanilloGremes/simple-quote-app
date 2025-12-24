@@ -9,7 +9,8 @@ export default function QuoteForm({
   total, 
   editingId, 
   clearForm,
-  clients // <--- RECEBENDO A LISTA DE CLIENTES
+  clients,
+  services // <--- RECEBENDO A LISTA DE SERVIÇOS
 }) {
 
   const handleItemChange = (index, field, value) => {
@@ -17,6 +18,26 @@ export default function QuoteForm({
     newItems[index][field] = value;
     setFormData({ ...formData, items: newItems });
   };
+
+  // --- NOVA FUNÇÃO: SELECIONAR SERVIÇO NA LINHA ---
+  const handleSelectServiceForItem = (index, e) => {
+      const serviceId = e.target.value;
+      if (!serviceId) return;
+
+      const service = services.find(s => s.id === serviceId);
+      if (service) {
+          const newItems = [...formData.items];
+          // Preenche a descrição e o preço automaticamente
+          newItems[index].description = service.description;
+          newItems[index].price = service.price;
+          setFormData({ ...formData, items: newItems });
+          
+          // Reseta o select para o usuário poder escolher outro se quiser, ou deixa visível.
+          // Aqui vamos resetar o value do select visualmente para "Select...", 
+          // mas os dados já foram para os inputs.
+          e.target.value = ""; 
+      }
+  }
 
   const addItem = () => {
     setFormData({
@@ -35,11 +56,9 @@ export default function QuoteForm({
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // --- NOVA FUNÇÃO: QUANDO SELECIONA UM CLIENTE ---
   const handleSelectClient = (e) => {
       const clientId = e.target.value;
       if (!clientId) return;
-
       const client = clients.find(c => c.id === clientId);
       if (client) {
           setFormData(prev => ({
@@ -61,14 +80,12 @@ export default function QuoteForm({
            </div>
        )}
 
-       {/* --- SELETOR DE CLIENTES AUTOMÁTICO --- */}
+       {/* SELETOR DE CLIENTES */}
        {clients && clients.length > 0 && (
            <div className="bg-blue-50 p-2 rounded border border-blue-100">
                <select onChange={handleSelectClient} className="w-full bg-transparent font-bold text-blue-800 outline-none text-sm">
                    <option value="">{t('selectClient')}</option>
-                   {clients.map(c => (
-                       <option key={c.id} value={c.id}>{c.name}</option>
-                   ))}
+                   {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                </select>
            </div>
        )}
@@ -92,8 +109,24 @@ export default function QuoteForm({
        
        <div className="space-y-4">
          {formData.items.map((item, index) => (
-           <div key={index} className="flex gap-2 items-start bg-gray-50 p-2 rounded border border-gray-200">
-              <div className="flex-1 space-y-2">
+           <div key={index} className="bg-gray-50 p-3 rounded border border-gray-200 shadow-sm">
+              
+              {/* --- NOVO: SELETOR DE SERVIÇO RÁPIDO --- */}
+              {services && services.length > 0 && (
+                  <div className="mb-2">
+                      <select 
+                        onChange={(e) => handleSelectServiceForItem(index, e)} 
+                        className="w-full text-xs bg-white border border-gray-300 rounded p-1 text-gray-600 outline-none"
+                      >
+                          <option value="">{t('selectService')}</option>
+                          {services.map(s => (
+                              <option key={s.id} value={s.id}>{s.description} - ${s.price}</option>
+                          ))}
+                      </select>
+                  </div>
+              )}
+
+              <div className="space-y-2">
                 <input 
                   type="text" 
                   placeholder={t('itemDesc')} 
@@ -101,33 +134,35 @@ export default function QuoteForm({
                   onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                   className="w-full p-2 border rounded text-sm font-bold"
                 />
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
                    <div className="flex-1">
+                     <label className="text-[10px] text-gray-500 font-bold ml-1">{t('itemQty')}</label>
                      <input 
                        type="number" 
-                       placeholder={t('itemQty')} 
+                       placeholder="0" 
                        value={item.qty}
                        onChange={(e) => handleItemChange(index, 'qty', e.target.value)}
                        className="w-full p-2 border rounded text-sm text-center"
                      />
                    </div>
                    <div className="flex-1">
+                     <label className="text-[10px] text-gray-500 font-bold ml-1">{t('itemPrice')}</label>
                      <input 
                        type="number" 
-                       placeholder={t('itemPrice')} 
+                       placeholder="0.00" 
                        value={item.price}
                        onChange={(e) => handleItemChange(index, 'price', e.target.value)}
                        className="w-full p-2 border rounded text-sm text-center"
                      />
                    </div>
+                   {/* Lixeira alinhada embaixo */}
+                   <button onClick={() => removeItem(index)} className="text-red-500 p-2 mt-4 bg-white rounded border border-red-100 hover:bg-red-50">🗑️</button>
                 </div>
               </div>
-              
-              <button onClick={() => removeItem(index)} className="text-red-500 p-2 mt-1">🗑️</button>
            </div>
          ))}
          
-         <button onClick={addItem} className="text-sm font-bold text-blue-600 border border-blue-600 rounded px-4 py-2 w-full hover:bg-blue-50">
+         <button onClick={addItem} className="text-sm font-bold text-blue-600 border border-blue-600 rounded px-4 py-3 w-full hover:bg-blue-50 border-dashed">
            + {t('btnAddItem')}
          </button>
        </div>

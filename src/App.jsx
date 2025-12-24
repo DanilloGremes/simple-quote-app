@@ -11,15 +11,18 @@ import QuoteForm from './components/QuoteForm'
 import CompanySettings from './components/CompanySettings'
 import HistoryList from './components/HistoryList'
 import Dashboard from './components/Dashboard'
-import ClientsTab from './components/ClientsTab' // --- NOVO IMPORT
+import ClientsTab from './components/ClientsTab'
+import ServicesTab from './components/ServicesTab'
+import BottomNav from './components/bottomNav' // --- NOVO
+import MenuTab from './components/MenuTab'     // --- NOVO
 
 function App() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('dashboard') 
   const [savedQuotes, setSavedQuotes] = useState([])
-  
-  const [clients, setClients] = useState([]) // --- NOVO ESTADO CLIENTES
+  const [clients, setClients] = useState([])
+  const [services, setServices] = useState([])
 
   const [editingId, setEditingId] = useState(null)
   
@@ -64,7 +67,8 @@ function App() {
               }
             }
             fetchQuotes(currentUser.uid)
-            fetchClients(currentUser.uid) // --- NOVO FETCH
+            fetchClients(currentUser.uid)
+            fetchServices(currentUser.uid)
         } catch (error) { console.error(error) }
       }
       setLoading(false)
@@ -81,13 +85,21 @@ function App() {
     } catch (e) { console.error(e) }
   }
 
-  // --- NOVO: BUSCAR CLIENTES
   const fetchClients = async (uid) => {
     try {
         const q = query(collection(db, "users", uid, "clients"), orderBy("name", "asc"));
         const querySnapshot = await getDocs(q);
         const clientsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setClients(clientsList);
+    } catch (e) { console.error(e) }
+  }
+
+  const fetchServices = async (uid) => {
+    try {
+        const q = query(collection(db, "users", uid, "services"), orderBy("description", "asc"));
+        const querySnapshot = await getDocs(q);
+        const servicesList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setServices(servicesList);
     } catch (e) { console.error(e) }
   }
 
@@ -176,10 +188,8 @@ function App() {
     } catch (e) { alert("Error: " + e.message) }
   }
 
-const saveQuote = async () => {
+  const saveQuote = async () => {
     if (!user) return;
-    
-    // 1. Prepara os dados do Orçamento
     const mainItem = formData.items[0] || {};
     const sanitizedQuote = {
         quoteNumber: formData.quoteNumber || "",
@@ -193,9 +203,7 @@ const saveQuote = async () => {
         total: total,
         date: new Date().toISOString()
     };
-    
     try {
-      // 2. Salva ou Atualiza o Orçamento (Lógica que já existia)
       if (editingId) {
           await updateDoc(doc(db, "users", user.uid, "quotes", editingId), sanitizedQuote);
           alert(t('alertQuoteUpdated'));
@@ -203,27 +211,19 @@ const saveQuote = async () => {
           await addDoc(collection(db, "users", user.uid, "quotes"), sanitizedQuote);
           alert(t('alertQuoteSaved'));
 
-          // --- NOVIDADE: AUTO-SAVE DO CLIENTE ---
-          // Só executa se for um NOVO orçamento (!editingId) e tiver nome do cliente
           if (formData.clientName) {
-              // Verifica se já existe alguém com esse nome na lista (para evitar duplicatas)
               const clientExists = clients.some(c => c.name.toLowerCase() === formData.clientName.toLowerCase());
-              
               if (!clientExists) {
-                  // Se não existe, cria o cliente automaticamente
                   await addDoc(collection(db, "users", user.uid, "clients"), {
                       name: formData.clientName,
                       phone: formData.clientPhone,
                       email: formData.clientEmail,
                       address: formData.clientAddress
                   });
-                  // Atualiza a lista de clientes na hora
                   fetchClients(user.uid); 
-                  console.log("Cliente salvo automaticamente!");
               }
           }
       }
-      
       fetchQuotes(user.uid);
       clearForm();
     } catch (e) { alert("Error: " + e.message) }
@@ -234,28 +234,66 @@ const saveQuote = async () => {
     setCompanyData(prev => ({ ...prev, [name]: value }))
   }
 
-  const generatePDF = () => {
+// Função atualizada para aceitar o tipo de documento (quote ou invoice)
+  const generatePDF = (mode = 'quote', quoteData = null) => {
+    // Se passarmos dados diretos (do historico), usa eles. Se não, usa o form atual.
+    const data = quoteData || formData;
+    const isInvoice = mode === 'invoice';
+    const isPaid = data.status === 'paid' || data.status === 'approved'; // Consideramos approved como pronto para pagar
+
     const doc = new jsPDF()
     const dataAtual = new Date().toLocaleDateString()
+    
+    // Configurações de Cor
+    const primaryColor = isInvoice ? [0, 0, 0] : [0, 0, 0]; // Preto para ambos (minimalista)
+    const headerColor = isInvoice ? [240, 240, 240] : [245, 245, 245]; // Cinza leve
+
     if (companyData.logo) { try { doc.addImage(companyData.logo, 'JPEG', 20, 15, 30, 30) } catch (err) {} }
     const headerX = companyData.logo ? 60 : 20
+    
     doc.setFont("helvetica", "bold"); doc.setFontSize(18)
-    doc.text(companyData.companyName?.toUpperCase() || t('pdfQuote'), headerX, 25)
+    // Título muda dependendo do modo
+    const title = isInvoice ? (isPaid ? t('pdfReceipt') : t('pdfInvoice')) : (companyData.companyName?.toUpperCase() || t('pdfQuote'));
+    doc.text(title, headerX, 25)
+    
     doc.setFontSize(9); doc.setFont("helvetica", "normal")
     doc.text(companyData.companyAddress || "", headerX, 32)
     doc.text(`${companyData.companyPhone || ""}  ${companyData.companyEmail || ""}`, headerX, 37)
     doc.text(companyData.companyWebsite || "", headerX, 42)
+    
+    // Info Lateral
     doc.setFontSize(10)
     doc.text(`${t('pdfDate')}: ${dataAtual}`, 150, 25)
-    doc.text(t('pdfValid'), 150, 30)
-    if (formData.quoteNumber) { doc.setFont("helvetica", "bold"); doc.text(`#: ${formData.quoteNumber}`, 150, 38) }
-    doc.setLineWidth(0.5); doc.line(20, 50, 190, 50)
-    doc.setFontSize(12); doc.setFont("helvetica", "bold"); doc.text(t('pdfClient'), 20, 60)
-    doc.setFont("helvetica", "normal"); doc.setFontSize(10)
-    doc.text(`${formData.clientName}`, 20, 68); doc.text(`${formData.clientAddress}`, 20, 74)
-    doc.text(`${formData.clientPhone}`, 110, 68); doc.text(`${formData.clientEmail}`, 110, 74)
-    doc.setFillColor(245, 245, 245); doc.rect(20, 85, 170, 10, "F") 
     
+    // Se for Invoice, mostra status de pagamento
+    if (isInvoice) {
+        doc.setFont("helvetica", "bold");
+        if (isPaid) {
+            doc.setTextColor(0, 150, 0); // Verde
+            doc.text(t('pdfPaid'), 150, 35);
+        } else {
+            doc.setTextColor(200, 0, 0); // Vermelho
+            doc.text(t('pdfUnpaid'), 150, 35);
+        }
+        doc.setTextColor(0, 0, 0); // Volta pro preto
+    } else {
+        doc.text(t('pdfValid'), 150, 30)
+    }
+
+    if (data.quoteNumber) { doc.setFont("helvetica", "bold"); doc.text(`#: ${data.quoteNumber}`, 150, 42) }
+    
+    doc.setLineWidth(0.5); doc.line(20, 50, 190, 50)
+    
+    // Cliente
+    doc.setFontSize(12); doc.setFont("helvetica", "bold"); 
+    doc.text(isInvoice ? t('pdfBillTo') : t('pdfClient'), 20, 60)
+    
+    doc.setFont("helvetica", "normal"); doc.setFontSize(10)
+    doc.text(`${data.clientName}`, 20, 68); doc.text(`${data.clientAddress}`, 20, 74)
+    doc.text(`${data.clientPhone}`, 110, 68); doc.text(`${data.clientEmail}`, 110, 74)
+    
+    // Cabeçalho Tabela
+    doc.setFillColor(...headerColor); doc.rect(20, 85, 170, 10, "F") 
     doc.setFont("helvetica", "bold"); doc.setFontSize(9)
     doc.text(t('itemDesc'), 25, 92)
     doc.text(t('itemQty'), 110, 92)
@@ -265,7 +303,13 @@ const saveQuote = async () => {
     let yPos = 105;
     doc.setFont("helvetica", "normal");
     
-    formData.items.forEach(item => {
+    // Tratamento de Itens (Array ou Legacy)
+    let itemsToPrint = data.items || [];
+    if (itemsToPrint.length === 0 && data.materialType) {
+         itemsToPrint = [{ description: data.materialType, qty: data.sqft, price: data.pricePerSqft }];
+    }
+
+    itemsToPrint.forEach(item => {
         const itemTotal = (Number(item.qty) || 0) * (Number(item.price) || 0);
         doc.text(item.description || "-", 25, yPos)
         doc.text(String(item.qty || 0), 110, yPos)
@@ -278,49 +322,61 @@ const saveQuote = async () => {
     yPos += 8;
     
     doc.setFont("helvetica", "bold"); doc.setFontSize(12)
-    doc.text(`${t('pdfFinalTotal')}: $${total.toFixed(2)}`, 120, yPos)
+    const finalTotal = data.total || itemsToPrint.reduce((acc, i) => acc + ((Number(i.qty)||0)*(Number(i.price)||0)), 0);
+    
+    doc.text(`${t('pdfFinalTotal')}: $${Number(finalTotal).toFixed(2)}`, 120, yPos)
 
     yPos += 15;
     doc.setFontSize(10); doc.text(t('pdfTerms') + ":", 20, yPos)
     doc.setFont("helvetica", "normal")
-    const terms = companyData.companyTerms ? companyData.companyTerms + "\n" + formData.notes : formData.notes
+    const terms = companyData.companyTerms ? companyData.companyTerms + "\n" + data.notes : data.notes
     const splitNotes = doc.splitTextToSize(terms || "", 170); 
     doc.text(splitNotes, 20, yPos + 6)
     
-    doc.save(`Quote_${formData.clientName || "Draft"}.pdf`)
+    const fileName = isInvoice ? `Invoice_${data.clientName}.pdf` : `Quote_${data.clientName}.pdf`;
+    doc.save(fileName)
   }
 
   if (loading) return <div className="flex h-screen items-center justify-center">{t('loading')}</div>
   if (!user) return <Login loginGoogle={loginGoogle} t={t} setLang={setLang} lang={lang} />
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center py-6 px-2 font-sans text-gray-800">
+    // Adicionei pb-24 aqui para o conteúdo não ficar atrás da barra de navegação
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center py-6 px-2 font-sans text-gray-800 pb-24">
       
+      {/* NavBar agora serve como Header simples */}
       <NavBar user={user} t={t} logout={logout} setLang={setLang} lang={lang} />
 
       <div className="bg-white w-full max-w-2xl rounded-xl shadow-lg border border-gray-200 overflow-hidden">
         
-        {/* --- MENU COM 5 ABAS AGORA --- */}
-        <div className="flex border-b border-gray-200 text-xs md:text-sm">
-          <button onClick={() => setActiveTab('dashboard')} className={`flex-1 py-3 font-bold ${activeTab === 'dashboard' ? 'bg-black text-white' : 'text-gray-500'}`}>{t('tabHome')}</button>
-          
-          {/* Nova Aba CLIENTS */}
-          <button onClick={() => setActiveTab('clients')} className={`flex-1 py-3 font-bold ${activeTab === 'clients' ? 'bg-black text-white' : 'text-gray-500'}`}>{t('tabClients')}</button>
-
-          <button onClick={() => setActiveTab('quote')} className={`flex-1 py-3 font-bold ${activeTab === 'quote' ? 'bg-black text-white' : 'text-gray-500'}`}>{t('tabNew')}</button>
-          <button onClick={() => setActiveTab('history')} className={`flex-1 py-3 font-bold ${activeTab === 'history' ? 'bg-black text-white' : 'text-gray-500'}`}>{t('tabHistory')}</button>
-          <button onClick={() => setActiveTab('company')} className={`flex-1 py-3 font-bold ${activeTab === 'company' ? 'bg-black text-white' : 'text-gray-500'}`}>{t('tabCompany')}</button>
-        </div>
-
+        {/* REMOVIDO: O antigo menu de abas do topo */}
+        
         {activeTab === 'dashboard' && <Dashboard savedQuotes={savedQuotes} t={t} setActiveTab={setActiveTab} />}
 
-        {/* --- RENDERIZANDO A TAB CLIENTES --- */}
         {activeTab === 'clients' && (
            <ClientsTab 
              user={user} 
              clients={clients} 
              fetchClients={fetchClients} 
              t={t} 
+           />
+        )}
+
+        {activeTab === 'services' && (
+           <ServicesTab 
+             user={user} 
+             services={services} 
+             fetchServices={fetchServices} 
+             t={t} 
+           />
+        )}
+        
+        {/* --- NOVO: ABA MENU --- */}
+        {activeTab === 'menu' && (
+           <MenuTab 
+             setActiveTab={setActiveTab}
+             t={t}
+             logout={logout}
            />
         )}
 
@@ -341,6 +397,7 @@ const saveQuote = async () => {
             startEditing={startEditing}
             deleteQuote={deleteQuote}
             updateStatus={updateStatus}
+            generatePDF={generatePDF}
             t={t}
            />
         )}
@@ -355,10 +412,15 @@ const saveQuote = async () => {
                 total={total}
                 editingId={editingId}
                 clearForm={clearForm}
-                clients={clients} // --- PASSANDO A LISTA PARA O FORM
+                clients={clients}
+                services={services}
             />
         )}
       </div>
+
+      {/* --- NOVA BARRA DE NAVEGAÇÃO --- */}
+      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} t={t} />
+
     </div>
   )
 }
