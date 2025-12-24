@@ -13,7 +13,7 @@ import HistoryList from './components/HistoryList'
 import Dashboard from './components/Dashboard'
 import ClientsTab from './components/ClientsTab'
 import ServicesTab from './components/ServicesTab'
-import BottomNav from './components/bottomNav'
+import BottomNav from './components/BottomNav'
 import MenuTab from './components/MenuTab'     
 
 function App() {
