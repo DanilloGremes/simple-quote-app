@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react'
 import { jsPDF } from "jspdf"
 import { auth, db, loginGoogle, logout } from './firebase'
 import { onAuthStateChanged } from 'firebase/auth'
-import { doc, getDoc, setDoc, collection, addDoc, getDocs, deleteDoc, query, orderBy } from 'firebase/firestore'
+import { doc, getDoc, setDoc, collection, addDoc, updateDoc, deleteDoc, getDocs, query, orderBy } from 'firebase/firestore'
 
 // --- DICIONÁRIO DE TRADUÇÕES ---
 const translations = {
   pt: {
-    appTitle: "SquarePro Quote", // Sugestão de nome mais amplo
+    appTitle: "SquarePro Quote",
     loginBtn: "Entrar com Google",
     loading: "Carregando...",
     welcome: "Olá",
@@ -39,14 +39,17 @@ const translations = {
     clientAddressPH: "Endereço da Obra",
     serviceTitle: "Serviço / Materiais",
     materialLabel: "DESCRIÇÃO / MATERIAL",
-    materialPH: "Ex: Instalação de Piso / Pintura / Drywall / Limpeza de Casa",
+    materialPH: "Ex: Instalação de Piso / Pintura / Drywall",
     sqftLabel: "ÁREA (SQFT)",
     priceLabel: "PREÇO ($)",
     notesPH: "Observações e detalhes...",
     totalEst: "TOTAL ESTIMADO",
-    btnSave: "Salvar",
+    btnSave: "Salvar Orçamento",
+    btnUpdate: "Atualizar Orçamento", // Novo
+    btnCancel: "Cancelar Edição", // Novo
     btnPDF: "Baixar PDF",
     alertQuoteSaved: "Orçamento salvo!",
+    alertQuoteUpdated: "Orçamento atualizado!",
 
     pdfQuote: "ORÇAMENTO",
     pdfDate: "Data",
@@ -90,14 +93,17 @@ const translations = {
     clientAddressPH: "Job Address",
     serviceTitle: "Service / Materials",
     materialLabel: "DESCRIPTION / MATERIAL",
-    materialPH: "Ex: LVP Floor / Painting / Drywall / House Cleaning",
+    materialPH: "Ex: LVP Floor / Painting / Drywall",
     sqftLabel: "AREA (SQFT)",
     priceLabel: "PRICE ($)",
     notesPH: "Notes and details...",
     totalEst: "ESTIMATED TOTAL",
-    btnSave: "Save",
+    btnSave: "Save Quote",
+    btnUpdate: "Update Quote",
+    btnCancel: "Cancel Edit",
     btnPDF: "Download PDF",
     alertQuoteSaved: "Quote saved!",
+    alertQuoteUpdated: "Quote updated!",
 
     pdfQuote: "QUOTE",
     pdfDate: "Date",
@@ -141,14 +147,17 @@ const translations = {
     clientAddressPH: "Dirección de Obra",
     serviceTitle: "Servicio / Materiales",
     materialLabel: "DESCRIPCIÓN / MATERIAL",
-    materialPH: "Ej: Instalación de Piso / Pintura / Limpieza de Casa",
+    materialPH: "Ej: Instalación de Piso / Pintura",
     sqftLabel: "ÁREA (SQFT)",
     priceLabel: "PRECIO ($)",
     notesPH: "Notas y detalles...",
     totalEst: "TOTAL ESTIMADO",
     btnSave: "Guardar",
+    btnUpdate: "Actualizar",
+    btnCancel: "Cancelar",
     btnPDF: "Bajar PDF",
     alertQuoteSaved: "¡Guardado!",
+    alertQuoteUpdated: "¡Actualizado!",
 
     pdfQuote: "PRESUPUESTO",
     pdfDate: "Fecha",
@@ -167,6 +176,9 @@ function App() {
   const [activeTab, setActiveTab] = useState('quote') 
   const [savedQuotes, setSavedQuotes] = useState([])
   
+  // Estado para controlar se estamos editando (guarda o ID do orcamento)
+  const [editingId, setEditingId] = useState(null)
+  
   const [lang, setLang] = useState(() => {
     const browserLang = navigator.language || navigator.userLanguage; 
     if (browserLang.startsWith('pt')) return 'pt';
@@ -176,10 +188,12 @@ function App() {
 
   const t = (key) => translations[lang][key] || key
 
-  const [formData, setFormData] = useState({
+  const initialFormState = {
     quoteNumber: '', clientName: '', clientPhone: '', clientEmail: '', clientAddress: '',
     materialType: '', sqft: '', pricePerSqft: '', notes: ''
-  })
+  }
+
+  const [formData, setFormData] = useState(initialFormState)
 
   const [companyData, setCompanyData] = useState({
     companyName: '', companyPhone: '', companyEmail: '', 
@@ -221,20 +235,49 @@ function App() {
     }
   }
 
-  // --- NOVA FUNÇÃO DE DELETAR ---
   const deleteQuote = async (quoteId, e) => {
-    e.stopPropagation(); // Evita que abra o orçamento ao clicar na lixeira
-    
+    e.stopPropagation(); 
     if (window.confirm(t('confirmDelete'))) {
         try {
             await deleteDoc(doc(db, "users", user.uid, "quotes", quoteId));
             alert(t('alertDeleted'));
-            fetchQuotes(user.uid); // Atualiza a lista
+            
+            // Se estavamos editando este item, limpa o formulario
+            if (editingId === quoteId) {
+                clearForm();
+            }
+            
+            fetchQuotes(user.uid); 
         } catch (error) {
             console.error("Error deleting document: ", error);
             alert("Erro ao deletar.");
         }
     }
+  }
+
+  // --- FUNÇÃO PARA INICIAR EDIÇÃO ---
+  const startEditing = (quote, e) => {
+    e.stopPropagation(); // Não abre o accordion, vai pra edicao
+    setEditingId(quote.id); // Salva o ID que estamos mexendo
+    setFormData({
+        quoteNumber: quote.quoteNumber || '',
+        clientName: quote.clientName || '',
+        clientPhone: quote.clientPhone || '',
+        clientEmail: quote.clientEmail || '',
+        clientAddress: quote.clientAddress || '',
+        materialType: quote.materialType || '',
+        sqft: quote.sqft || '',
+        pricePerSqft: quote.pricePerSqft || '',
+        notes: quote.notes || ''
+    });
+    setActiveTab('quote'); // Muda para a aba de formulario
+    // Scroll para o topo (opcional)
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  const clearForm = () => {
+      setFormData(initialFormState);
+      setEditingId(null);
   }
 
   const handleLogoChange = (e) => {
@@ -276,7 +319,7 @@ function App() {
     }
   }
 
-  const saveQuoteToHistory = async () => {
+  const saveQuote = async () => {
     if (!user) return;
     
     const sanitizedQuote = {
@@ -294,13 +337,26 @@ function App() {
     };
 
     try {
-      await addDoc(collection(db, "users", user.uid, "quotes"), sanitizedQuote)
-      fetchQuotes(user.uid)
-      alert(t('alertQuoteSaved'))
+      if (editingId) {
+          // ATUALIZAR EXISTENTE
+          await updateDoc(doc(db, "users", user.uid, "quotes", editingId), sanitizedQuote);
+          alert(t('alertQuoteUpdated'));
+      } else {
+          // CRIAR NOVO
+          await addDoc(collection(db, "users", user.uid, "quotes"), sanitizedQuote);
+          alert(t('alertQuoteSaved'));
+      }
+      
+      fetchQuotes(user.uid);
+      clearForm(); // Limpa o formulário após salvar
     } catch (e) { alert("Error: " + e.message) }
   }
 
-  const loadQuote = (quote) => {
+  // Apenas carrega os dados no form para visualizacao (sem modo edicao)
+  const loadQuoteView = (quote) => {
+    // Se clicar no corpo do card, carrega os dados mas não ativa modo edição (ou ativa, voce decide)
+    // Aqui vou fazer carregar os dados mas SEM setar o ID, para ser só uma cópia
+    // Se quiser que edite ao clicar, basta chamar startEditing
     setFormData({
         quoteNumber: quote.quoteNumber || '',
         clientName: quote.clientName || '',
@@ -312,6 +368,7 @@ function App() {
         pricePerSqft: quote.pricePerSqft || '',
         notes: quote.notes || ''
     })
+    setEditingId(null); // Garante que é um novo orçamento baseado neste
     setActiveTab('quote')
   }
 
@@ -459,14 +516,14 @@ function App() {
           </div>
         )}
 
-        {/* --- ABA HISTÓRICO ATUALIZADA COM BOTÃO DE DELETAR --- */}
+        {/* ABA HISTORICO COM EDITAR */}
         {activeTab === 'history' && (
             <div className="p-4">
                 <h2 className="font-bold mb-4">{t('historyTitle')}</h2>
                 {savedQuotes.length === 0 ? <p className="text-gray-500 text-sm">{t('emptyHistory')}</p> : (
                     <div className="space-y-2">
                         {savedQuotes.map(quote => (
-                            <div key={quote.id} onClick={() => loadQuote(quote)} className="border p-3 rounded hover:bg-gray-50 cursor-pointer flex justify-between items-center bg-gray-50">
+                            <div key={quote.id} onClick={() => loadQuoteView(quote)} className="border p-3 rounded hover:bg-gray-50 cursor-pointer flex justify-between items-center bg-gray-50">
                                 <div>
                                     <p className="font-bold text-sm">{quote.clientName || "-"}</p>
                                     <p className="text-xs text-gray-500">#{quote.quoteNumber} • {quote.materialType}</p>
@@ -477,6 +534,15 @@ function App() {
                                         <span className="text-xs text-blue-600">{t('openBtn')}</span>
                                     </div>
                                     
+                                    {/* Botão de Editar (Lápis) */}
+                                    <button 
+                                        onClick={(e) => startEditing(quote, e)}
+                                        className="bg-blue-100 p-2 rounded text-blue-600 hover:bg-blue-200 transition"
+                                        title="Editar"
+                                    >
+                                        ✏️
+                                    </button>
+
                                     {/* Botão de Deletar */}
                                     <button 
                                         onClick={(e) => deleteQuote(quote.id, e)}
@@ -495,6 +561,14 @@ function App() {
 
         {activeTab === 'quote' && (
           <div className="p-6 space-y-4">
+             {/* Barra de Aviso de Edição */}
+             {editingId && (
+                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 flex justify-between items-center">
+                     <p className="text-sm text-yellow-700 font-bold">⚠️ Editando Orçamento Existente</p>
+                     <button onClick={clearForm} className="text-xs text-gray-500 underline">{t('btnCancel')}</button>
+                 </div>
+             )}
+
              <div className="flex justify-between items-center border-b pb-2">
                 <h2 className="font-bold">{t('clientTitle')}</h2>
                 <input type="text" name="quoteNumber" value={formData.quoteNumber} onChange={handleChange} 
@@ -537,13 +611,20 @@ function App() {
                     <p className="text-3xl font-bold">${total.toFixed(2)}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                    <button onClick={saveQuoteToHistory} className="bg-gray-700 hover:bg-gray-600 py-3 rounded font-bold text-sm">
-                        💾 {t('btnSave')}
+                    {/* Botão Salvar inteligente (Update ou Create) */}
+                    <button onClick={saveQuote} className={`${editingId ? 'bg-yellow-600 hover:bg-yellow-500' : 'bg-green-700 hover:bg-green-600'} py-3 rounded font-bold text-sm transition`}>
+                        {editingId ? "✏️ " + t('btnUpdate') : "💾 " + t('btnSave')}
                     </button>
                     <button onClick={generatePDF} className="bg-white text-black hover:bg-gray-200 py-3 rounded font-bold text-sm">
                         📄 {t('btnPDF')}
                     </button>
                 </div>
+                {/* Botão Cancelar extra caso queira limpar */}
+                {editingId && (
+                     <button onClick={clearForm} className="w-full mt-2 text-xs text-gray-400 underline">
+                         {t('btnCancel')}
+                     </button>
+                )}
              </div>
           </div>
         )}
