@@ -1,6 +1,4 @@
 import React from 'react';
-// 1. IMPORTAMOS A IMAGEM DA PASTA ASSETS
-// (Certifique-se que o nome do arquivo aqui bate com o que você salvou na pasta)
 import appLogo from '../assets/logo.png'; 
 
 export default function Login({ loginGoogle, t, setLang, lang }) {
@@ -12,7 +10,7 @@ export default function Login({ loginGoogle, t, setLang, lang }) {
         {/* w-32 define a largura (ajuste se ficar grande/pequeno) */}
         {/* mx-auto centraliza a imagem */}
         {/* mb-6 dá um espaço embaixo antes do título */}
-        <img src={appLogo} alt="SquarePro Logo" className="w-32 mx-auto mb-6" />
+        <img src={appLogo} alt="SquarePro Logo" className="w-40 mx-auto mb-6" />
 
         <h1 className="text-3xl font-bold mb-2">{t('appTitle')}</h1>
         

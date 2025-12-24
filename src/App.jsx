@@ -28,7 +28,6 @@ function App() {
 
   const t = (key) => translations[lang][key] || key
 
-  // --- MUDANÇA 1: Estrutura inicial agora tem um array 'items'
   const initialFormState = {
     quoteNumber: '', clientName: '', clientPhone: '', clientEmail: '', clientAddress: '',
     notes: '',
