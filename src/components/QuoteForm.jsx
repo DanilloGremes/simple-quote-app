@@ -2,23 +2,22 @@ import React from 'react';
 
 export default function QuoteForm({ 
   formData, 
-  setFormData, // Precisamos do setter direto agora para manipular o array
+  setFormData, 
   saveQuote, 
   generatePDF, 
   t, 
   total, 
   editingId, 
-  clearForm 
+  clearForm,
+  clients // <--- RECEBENDO A LISTA DE CLIENTES
 }) {
 
-  // Função para alterar um item específico da lista
   const handleItemChange = (index, field, value) => {
     const newItems = [...formData.items];
     newItems[index][field] = value;
     setFormData({ ...formData, items: newItems });
   };
 
-  // Função para adicionar nova linha
   const addItem = () => {
     setFormData({
       ...formData,
@@ -26,16 +25,31 @@ export default function QuoteForm({
     });
   };
 
-  // Função para remover linha
   const removeItem = (index) => {
     const newItems = formData.items.filter((_, i) => i !== index);
     setFormData({ ...formData, items: newItems });
   };
 
-  // Inputs normais (Cliente, etc)
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  // --- NOVA FUNÇÃO: QUANDO SELECIONA UM CLIENTE ---
+  const handleSelectClient = (e) => {
+      const clientId = e.target.value;
+      if (!clientId) return;
+
+      const client = clients.find(c => c.id === clientId);
+      if (client) {
+          setFormData(prev => ({
+              ...prev,
+              clientName: client.name || '',
+              clientPhone: client.phone || '',
+              clientEmail: client.email || '',
+              clientAddress: client.address || ''
+          }));
+      }
   };
 
   return (
@@ -47,7 +61,18 @@ export default function QuoteForm({
            </div>
        )}
 
-       {/* DADOS DO CLIENTE (Manteve igual) */}
+       {/* --- SELETOR DE CLIENTES AUTOMÁTICO --- */}
+       {clients && clients.length > 0 && (
+           <div className="bg-blue-50 p-2 rounded border border-blue-100">
+               <select onChange={handleSelectClient} className="w-full bg-transparent font-bold text-blue-800 outline-none text-sm">
+                   <option value="">{t('selectClient')}</option>
+                   {clients.map(c => (
+                       <option key={c.id} value={c.id}>{c.name}</option>
+                   ))}
+               </select>
+           </div>
+       )}
+
        <div className="flex justify-between items-center border-b pb-2">
           <h2 className="font-bold">{t('clientTitle')}</h2>
           <input type="text" name="quoteNumber" value={formData.quoteNumber} onChange={handleChange} 
@@ -63,7 +88,6 @@ export default function QuoteForm({
           </div>
        </div>
        
-       {/* --- NOVA ÁREA DE ITENS --- */}
        <h2 className="font-bold border-b pb-2 pt-4">{t('serviceTitle')}</h2>
        
        <div className="space-y-4">
@@ -99,10 +123,7 @@ export default function QuoteForm({
                 </div>
               </div>
               
-              {/* Botão de Remover (Lixeira) */}
-              <button onClick={() => removeItem(index)} className="text-red-500 p-2 mt-1">
-                🗑️
-              </button>
+              <button onClick={() => removeItem(index)} className="text-red-500 p-2 mt-1">🗑️</button>
            </div>
          ))}
          
@@ -116,7 +137,6 @@ export default function QuoteForm({
        <div className="bg-black text-white p-4 rounded mt-4">
           <div className="flex justify-between items-end mb-4">
               <p className="text-sm text-gray-400">{t('totalEst')}</p>
-              {/* Total agora é calculado no App.js somando o array */}
               <p className="text-3xl font-bold">${total.toFixed(2)}</p>
           </div>
           <div className="grid grid-cols-2 gap-2">

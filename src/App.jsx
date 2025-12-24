@@ -11,12 +11,16 @@ import QuoteForm from './components/QuoteForm'
 import CompanySettings from './components/CompanySettings'
 import HistoryList from './components/HistoryList'
 import Dashboard from './components/Dashboard'
+import ClientsTab from './components/ClientsTab' // --- NOVO IMPORT
 
 function App() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('dashboard') 
   const [savedQuotes, setSavedQuotes] = useState([])
+  
+  const [clients, setClients] = useState([]) // --- NOVO ESTADO CLIENTES
+
   const [editingId, setEditingId] = useState(null)
   
   const [lang, setLang] = useState(() => {
@@ -41,7 +45,6 @@ function App() {
     companyAddress: '', companyWebsite: '', companyTerms: '', logo: ''
   })
 
-  
   const total = formData.items.reduce((acc, item) => {
       return acc + ((Number(item.qty) || 0) * (Number(item.price) || 0));
   }, 0);
@@ -61,6 +64,7 @@ function App() {
               }
             }
             fetchQuotes(currentUser.uid)
+            fetchClients(currentUser.uid) // --- NOVO FETCH
         } catch (error) { console.error(error) }
       }
       setLoading(false)
@@ -74,6 +78,16 @@ function App() {
         const querySnapshot = await getDocs(q);
         const quotesList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setSavedQuotes(quotesList);
+    } catch (e) { console.error(e) }
+  }
+
+  // --- NOVO: BUSCAR CLIENTES
+  const fetchClients = async (uid) => {
+    try {
+        const q = query(collection(db, "users", uid, "clients"), orderBy("name", "asc"));
+        const querySnapshot = await getDocs(q);
+        const clientsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setClients(clientsList);
     } catch (e) { console.error(e) }
   }
 
@@ -101,7 +115,6 @@ function App() {
   const startEditing = (quote, e) => {
     e.stopPropagation(); 
     setEditingId(quote.id);
- 
     let loadedItems = quote.items || [];
     if (loadedItems.length === 0 && quote.materialType) {
         loadedItems = [{
@@ -110,20 +123,14 @@ function App() {
             price: quote.pricePerSqft
         }];
     }
-  
     if (loadedItems.length === 0) loadedItems = [{ description: '', qty: '', price: '' }];
 
-    setFormData({ 
-        ...quote, 
-        items: loadedItems 
-    });
-    
+    setFormData({ ...quote, items: loadedItems });
     setActiveTab('quote');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   const loadQuoteView = (quote) => {
-  
     let loadedItems = quote.items || [];
     if (loadedItems.length === 0 && quote.materialType) {
         loadedItems = [{ description: quote.materialType, qty: quote.sqft, price: quote.pricePerSqft }];
@@ -171,10 +178,7 @@ function App() {
 
   const saveQuote = async () => {
     if (!user) return;
-    
-  
     const mainItem = formData.items[0] || {};
-    
     const sanitizedQuote = {
         quoteNumber: formData.quoteNumber || "",
         clientName: formData.clientName || "",
@@ -182,15 +186,11 @@ function App() {
         clientEmail: formData.clientEmail || "",
         clientAddress: formData.clientAddress || "",
         notes: formData.notes || "",
-        items: formData.items, 
-        
-      
+        items: formData.items,
         materialType: mainItem.description || "Multi-services",
-        
-        total: total, 
+        total: total,
         date: new Date().toISOString()
     };
-    
     try {
       if (editingId) {
           await updateDoc(doc(db, "users", user.uid, "quotes", editingId), sanitizedQuote);
@@ -229,16 +229,14 @@ function App() {
     doc.setFont("helvetica", "normal"); doc.setFontSize(10)
     doc.text(`${formData.clientName}`, 20, 68); doc.text(`${formData.clientAddress}`, 20, 74)
     doc.text(`${formData.clientPhone}`, 110, 68); doc.text(`${formData.clientEmail}`, 110, 74)
-    doc.setFillColor(245, 245, 245); doc.rect(20, 85, 170, 10, "F") // Cabeçalho menor
+    doc.setFillColor(245, 245, 245); doc.rect(20, 85, 170, 10, "F") 
     
-    // --- CABEÇALHO DA TABELA NO PDF
     doc.setFont("helvetica", "bold"); doc.setFontSize(9)
     doc.text(t('itemDesc'), 25, 92)
     doc.text(t('itemQty'), 110, 92)
     doc.text(t('itemPrice'), 140, 92)
     doc.text(t('itemTotal'), 170, 92)
 
-    // --- LOOP DOS ITENS
     let yPos = 105;
     doc.setFont("helvetica", "normal");
     
@@ -251,7 +249,6 @@ function App() {
         yPos += 8; 
     });
 
-    // Linha final
     doc.line(100, yPos, 190, yPos)
     yPos += 8;
     
@@ -278,14 +275,29 @@ function App() {
 
       <div className="bg-white w-full max-w-2xl rounded-xl shadow-lg border border-gray-200 overflow-hidden">
         
+        {/* --- MENU COM 5 ABAS AGORA --- */}
         <div className="flex border-b border-gray-200 text-xs md:text-sm">
           <button onClick={() => setActiveTab('dashboard')} className={`flex-1 py-3 font-bold ${activeTab === 'dashboard' ? 'bg-black text-white' : 'text-gray-500'}`}>{t('tabHome')}</button>
+          
+          {/* Nova Aba CLIENTS */}
+          <button onClick={() => setActiveTab('clients')} className={`flex-1 py-3 font-bold ${activeTab === 'clients' ? 'bg-black text-white' : 'text-gray-500'}`}>{t('tabClients')}</button>
+
           <button onClick={() => setActiveTab('quote')} className={`flex-1 py-3 font-bold ${activeTab === 'quote' ? 'bg-black text-white' : 'text-gray-500'}`}>{t('tabNew')}</button>
           <button onClick={() => setActiveTab('history')} className={`flex-1 py-3 font-bold ${activeTab === 'history' ? 'bg-black text-white' : 'text-gray-500'}`}>{t('tabHistory')}</button>
           <button onClick={() => setActiveTab('company')} className={`flex-1 py-3 font-bold ${activeTab === 'company' ? 'bg-black text-white' : 'text-gray-500'}`}>{t('tabCompany')}</button>
         </div>
 
         {activeTab === 'dashboard' && <Dashboard savedQuotes={savedQuotes} t={t} setActiveTab={setActiveTab} />}
+
+        {/* --- RENDERIZANDO A TAB CLIENTES --- */}
+        {activeTab === 'clients' && (
+           <ClientsTab 
+             user={user} 
+             clients={clients} 
+             fetchClients={fetchClients} 
+             t={t} 
+           />
+        )}
 
         {activeTab === 'company' && (
           <CompanySettings 
@@ -311,13 +323,14 @@ function App() {
         {activeTab === 'quote' && (
             <QuoteForm 
                 formData={formData}
-                setFormData={setFormData} // Passando setter
+                setFormData={setFormData}
                 saveQuote={saveQuote}
                 generatePDF={generatePDF}
                 t={t}
                 total={total}
                 editingId={editingId}
                 clearForm={clearForm}
+                clients={clients} // --- PASSANDO A LISTA PARA O FORM
             />
         )}
       </div>

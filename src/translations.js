@@ -56,6 +56,10 @@ export const translations = {
     btnPDF: "Baixar PDF",
     alertQuoteSaved: "Orçamento salvo!",
     alertQuoteUpdated: "Orçamento atualizado!",
+    tabClients: "CLIENTES",
+    selectClient: "📂 Buscar Cliente Salvo...",
+    btnSaveClient: "Salvar Cliente",
+    clientListTitle: "Meus Clientes",
 
     pdfQuote: "ORÇAMENTO",
     pdfDate: "Data",
@@ -130,6 +134,10 @@ export const translations = {
     btnPDF: "Download PDF",
     alertQuoteSaved: "Quote saved!",
     alertQuoteUpdated: "Quote updated!",
+    tabClients: "CLIENTS",
+    selectClient: "📂 Select Saved Client...",
+    btnSaveClient: "Save Client",
+    clientListTitle: "My Clients",
 
     pdfQuote: "QUOTE",
     pdfDate: "Date",
@@ -203,6 +211,10 @@ export const translations = {
     btnPDF: "Bajar PDF",
     alertQuoteSaved: "¡Guardado!",
     alertQuoteUpdated: "¡Actualizado!",
+    tabClients: "CLIENTES",
+    selectClient: "📂 Seleccionar Cliente...",
+    btnSaveClient: "Guardar Cliente",
+    clientListTitle: "Mis Clientes",
 
     pdfQuote: "PRESUPUESTO",
     pdfDate: "Fecha",
