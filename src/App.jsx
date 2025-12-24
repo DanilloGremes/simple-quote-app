@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { jsPDF } from "jspdf"
-import 'jspdf-autotable' // Opcional: Se quiser tabelas bonitas no futuro, mas vamos fazer manual por enquanto
 import { auth, db, loginGoogle, logout } from './firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { doc, getDoc, setDoc, collection, addDoc, updateDoc, deleteDoc, getDocs, query, orderBy } from 'firebase/firestore'
